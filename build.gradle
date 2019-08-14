@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+    id 'scala'
+}
+
+group 'com.gelerion.spark.bin.packing.partitioner'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // https://mvnrepository.com/artifact/org.apache.spark/spark-sql
+    compile group: 'org.apache.spark', name: 'spark-sql_2.12', version: '2.4.3'
+    // https://mvnrepository.com/artifact/net.ruippeixotog/scala-scraper
+    compile group: 'net.ruippeixotog', name: 'scala-scraper_2.12', version: '2.1.0'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api-scala_2.12', version: '11.0'
+
+    // https://mvnrepository.com/artifact/com.softwaremill.sttp/core
+    compile group: 'com.softwaremill.sttp', name: 'core_2.12', version: '1.6.4'
+
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
