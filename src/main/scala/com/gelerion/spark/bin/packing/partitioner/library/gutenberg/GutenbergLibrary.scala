@@ -1,8 +1,15 @@
 package com.gelerion.spark.bin.packing.partitioner.library.gutenberg
 
+import java.nio.file.{Files, Paths}
+
+import com.gelerion.spark.bin.packing.partitioner.domain.serde.BookshelfSerDe
+import com.gelerion.spark.bin.packing.partitioner.domain.{Bookshelf, BookshelfEBooksSummary, Ebook, EbookUrl}
 import com.gelerion.spark.bin.packing.partitioner.html.parser.HtmlParser
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import org.apache.logging.log4j.scala.Logging
+
+import scala.io.{BufferedSource, Codec}
+import scala.reflect.io.File
 
 //http://www.gutenberg.lib.md.us
 //Project Gutenberg offers over 59,000 free eBooks. Choose among free epub and Kindle eBooks, download them or
@@ -27,13 +34,17 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
 
   private val bookshelfHrefRegex = "^/wiki/.+\\(Bookshelf\\)"
 
-  def getEbookUrls(bookshelf: Bookshelf) = {
+  def resolveEbookUrls(bookshelf: Bookshelf): BookshelfEBooksSummary = {
     //bookshelf-ebooks
-    bookshelf.ebooks
-      .map(ebook => generateEbookUrl(ebook))
+    val ebookUrls = getEbookUrls(bookshelf)
+    BookshelfEBooksSummary(bookshelf, ebookUrls, ebookUrls.map(_.length).sum)
   }
 
-  def generateEbookUrl(ebook: Ebook) = {
+  private def getEbookUrls(bookshelf: Bookshelf): Seq[EbookUrl] = {
+    bookshelf.ebooks.flatMap(ebook => generateEbookUrl(ebook))
+  }
+
+  private def generateEbookUrl(ebook: Ebook): Option[EbookUrl] = {
     //generate-ebook-urls
     urlGenerator.generateFor(ebook)
 
@@ -92,7 +103,49 @@ object Test {
   def main(args: Array[String]): Unit = {
 //    new GutenbergLibrary().getAllBookshelfUrls().foreach(println)
 //    new GutenbergLibrary().getEbookIdsAndTitles("https://www.gutenberg.org/wiki/Zoology_(Bookshelf)").foreach(println)
-    new GutenbergLibrary().getBookshelvesWithEbooks().foreach(println)
+//    new GutenbergLibrary().getBookshelvesWithEbooks().foreach(println)
+
+    //create bookshelves
+    val library = new GutenbergLibrary()
+//    val bookshelves = library.getBookshelvesWithEbooks()
+//    File("bookshelves").writeAll(BookshelfSerDe.encode(bookshelves))
+    val requested = 1
+    val source: BufferedSource = File("bookshelves").chars(Codec.UTF8)
+    val bookshelves = source.getLines().take(requested).flatMap(BookshelfSerDe.decode).flatten
+
+
+//    for (bookshelf <- bookshelves;
+//         urls: EbookUrl <- library.getEbookUrls(bookshelf)) {
+//
+//    }
+
+    val urls = bookshelves.map(library.resolveEbookUrls)
+    urls.foreach(url => println(url))
+    source.close()
+//
+
+
+
+
+//    val bookshelves = Seq(
+//      Bookshelf("url1", Seq(Ebook(1, "title1"), Ebook(2, "title2"))),
+//      Bookshelf("url2", Seq(Ebook(3, "title3"), Ebook(4, "title4")))
+//    )
+//
+//    val encoded = BookshelfSerDe.encode(bookshelves)
+//    println(encoded)
+//
+//    println(BookshelfSerDe.decode(encoded))
+//    val a = bookshelves.map(b => s"${b.url}***${b.ebooks.map(e => s"${e.id}^^${e.title}").mkString(" ")}").mkString("\n")
+//    println(a)
+
+//    Files.write(Paths.get())
+//    val strings: Seq[String] = bookshelves.map(_.toString)
+
+
+//    library.getBookshelvesWithEbooks().take(2).foreach(shelf => {
+//      library.getEbookUrls(shelf).foreach(println)
+//    })
   }
 
 }
