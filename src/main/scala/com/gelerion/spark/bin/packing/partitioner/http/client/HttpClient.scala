@@ -1,5 +1,7 @@
 package com.gelerion.spark.bin.packing.partitioner.http.client
 
+import java.nio.charset.StandardCharsets
+
 import com.softwaremill.sttp._
 
 import scala.util.Try
@@ -12,6 +14,13 @@ class HttpClient {
     val request: Request[String, Nothing] = sttp.head(uri"$url")
     val response: Try[Id[Response[String]]] = Try(backend.send(request))
     handler(response)
+  }
+
+  def get(url: String): String = {
+    val resp: Id[Response[String]] = sttp.get(uri"$url")
+      .response(asString(StandardCharsets.ISO_8859_1.name()))
+      .send()
+    resp.unsafeBody
   }
 
 }

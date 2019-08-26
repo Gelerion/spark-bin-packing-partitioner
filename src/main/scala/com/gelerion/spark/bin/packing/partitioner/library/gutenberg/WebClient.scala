@@ -5,11 +5,11 @@ import com.gelerion.spark.bin.packing.partitioner.http.client.HttpClient
 
 import scala.util.{Failure, Success}
 
-case class UrlGenerator(httpClient: HttpClient = new HttpClient) {
+case class WebClient(httpClient: HttpClient = new HttpClient) {
   private val root = "http://www.gutenberg.lib.md.us"
   private val exts = ".txt" :: "-8.txt" :: "-0.txt" :: Nil
 
-  def generateFor(ebook: Ebook): Option[EbookUrl] = {
+  def generateUrlFor(ebook: Ebook): Option[EbookUrl] = {
     val id = ebook.id
     //750702 -> 7/5/0/7/0
     val path = id.toString.dropRight(1).toCharArray.mkString("/")
@@ -39,11 +39,30 @@ case class UrlGenerator(httpClient: HttpClient = new HttpClient) {
 //      }
 //    }
   }
+
+  def readText(ebookUrl: EbookUrl): Stream[String] = {
+    httpClient.get(ebookUrl.url).split(System.lineSeparator()).toStream
+  }
 }
 
 
 object TestGen {
   def main(args: Array[String]): Unit = {
-    println(UrlGenerator().generateFor(Ebook(24583, "abc")))
+//    println(WebClient().generateUrlFor(Ebook(24583, "abc")))
+
+//    WebClient().readText(EbookUrl(null, "http://www.gutenberg.lib.md.us/6/1/611/611.txt", 0))
+//      .dropWhile(line => !GutenbergLibrary.textStartMarkers.startsWith(line))
+//      .tail
+//      .takeWhile(line => !GutenbergLibrary.textEndMarkers.startsWith(line))
+//      .foreach(text => println(text))
+
+
+//    val text = WebClient().readText(EbookUrl(null, "http://www.gutenberg.lib.md.us/6/1/611/611.txt", 0))
+//        .dropWhile(row => {
+//          val bool = GutenbergLibrary.textStartMarkers.contains(row)
+//          if (!bool) println(s"row start marker $row")
+//          bool
+//        })
+//    println(text.force)
   }
 }

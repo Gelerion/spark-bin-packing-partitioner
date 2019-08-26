@@ -3,8 +3,10 @@ package com.gelerion.spark.bin.packing.partitioner.library.gutenberg
 import java.nio.file.{Files, Paths}
 
 import com.gelerion.spark.bin.packing.partitioner.domain.serde.BookshelfSerDe
-import com.gelerion.spark.bin.packing.partitioner.domain.{Bookshelf, BookshelfEBooksSummary, Ebook, EbookUrl}
+import com.gelerion.spark.bin.packing.partitioner.domain.{Bookshelf, EBooksUrls, Ebook, EbookText, EbookUrl}
 import com.gelerion.spark.bin.packing.partitioner.html.parser.HtmlParser
+import com.gelerion.spark.bin.packing.partitioner.library.gutenberg.GutenbergLibrary.{textEndMarkers, textStartMarkers}
+import com.gelerion.spark.bin.packing.partitioner.utils.Trie
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import org.apache.logging.log4j.scala.Logging
 
@@ -16,7 +18,7 @@ import scala.reflect.io.File
 //read them online. You will find the world's great literature here, with focus on older works for which U.S.
 //copyright has expired. Thousands of volunteers digitized and diligently proofread the eBooks, for enjoyment and education.
 class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
-                       urlGenerator: UrlGenerator = UrlGenerator()) extends Logging{
+                       webClient: WebClient = WebClient()) extends Logging {
   private val baseUrl = "https://www.gutenberg.org"
   private val bookshelfUrl1 = baseUrl + "/wiki/Category:Bookshelf"
   private val bookshelfUrl2 = baseUrl + "/w/index.php?title=Category:Bookshelf&pagefrom=The+Girls+Own+Paper+%28Bookshelf%29#mw-pages"
@@ -34,10 +36,29 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
 
   private val bookshelfHrefRegex = "^/wiki/.+\\(Bookshelf\\)"
 
-  def resolveEbookUrls(bookshelf: Bookshelf): BookshelfEBooksSummary = {
+  def getEbooksTexts(ebooksUrls: EBooksUrls): Seq[EbookText] = {
+    //get-ebook-texts
+    ebooksUrls.booksUrls.map(bookUrl => {
+      logger.debug(s"Getting text of ${bookUrl.ebook.id} - ${bookUrl.ebook.title}, ${bookUrl.url} ...")
+      getEbookText(bookUrl)
+    })
+  }
+
+  private def getEbookText(ebookUrl: EbookUrl): EbookText  = {
+    val text = webClient.readText(ebookUrl)
+      .dropWhile(line => !textStartMarkers.startsWith(line))
+      .tail //drop start marker
+      .takeWhile(line => !textEndMarkers.startsWith(line))
+      .mkString("")
+
+    EbookText(ebookUrl.ebook, text)
+  }
+
+  def resolveEbookUrls(bookshelf: Bookshelf): EBooksUrls = {
     //bookshelf-ebooks
+    logger.debug(s"Fetching ebook urls from ${bookshelf.url}")
     val ebookUrls = getEbookUrls(bookshelf)
-    BookshelfEBooksSummary(bookshelf, ebookUrls, ebookUrls.map(_.length).sum)
+    EBooksUrls(bookshelf.url, ebookUrls, ebookUrls.map(_.length).sum)
   }
 
   private def getEbookUrls(bookshelf: Bookshelf): Seq[EbookUrl] = {
@@ -46,11 +67,12 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
 
   private def generateEbookUrl(ebook: Ebook): Option[EbookUrl] = {
     //generate-ebook-urls
-    urlGenerator.generateFor(ebook)
+    logger.trace(s"Generating url for $ebook")
+    webClient.generateUrlFor(ebook)
 
   }
 
-  def getBookshelvesWithEbooks(): Seq[Bookshelf] = {
+  def getBookshelvesWithEbooks: Seq[Bookshelf] = {
     logger.info("*** GETTING BOOK IDS")
     //get-bookshelf-ids-and-titles!
     getAllBookshelfUrls()
@@ -147,5 +169,97 @@ object Test {
 //      library.getEbookUrls(shelf).foreach(println)
 //    })
   }
+
+}
+
+object GutenbergLibrary {
+  private val textStartMarkers: Trie[Boolean] = Set(
+    "*END*THE SMALL PRINT",
+    "*** START OF THE PROJECT GUTENBERG",
+    "*** START OF THIS PROJECT GUTENBERG",
+    "This etext was prepared by",
+    "E-text prepared by",
+    "Produced by",
+    "Distributed Proofreading Team",
+    "Proofreading Team at http://www.pgdp.net",
+    "http://gallica.bnf.fr)",
+    "      http://archive.org/details/",
+    "http://www.pgdp.net",
+    "by The Internet Archive)",
+    "by The Internet Archive/Canadian Libraries",
+    "by The Internet Archive/American Libraries",
+    "public domain material from the Internet Archive",
+    "Internet Archive)",
+    "Internet Archive/Canadian Libraries",
+    "Internet Archive/American Libraries",
+    "material from the Google Print project",
+    "*END THE SMALL PRINT",
+    "***START OF THE PROJECT GUTENBERG",
+    "This etext was produced by",
+    "*** START OF THE COPYRIGHTED",
+    "http://gutenberg.spiegel.de/ erreichbar.",
+    "Project Runeberg publishes",
+    "Beginning of this Project Gutenberg",
+    "Project Gutenberg Online Distributed",
+    "Gutenberg Online Distributed",
+    "the Project Gutenberg Online Distributed",
+    "Project Gutenberg TEI",
+    "This eBook was prepared by",
+    "http://gutenberg2000.de erreichbar.",
+    "This Etext was prepared by",
+    "This Project Gutenberg Etext was prepared by",
+    "Gutenberg Distributed Proofreaders",
+    "Project Gutenberg Distributed Proofreaders",
+    "the Project Gutenberg Online Distributed Proofreading Team",
+    "**The Project Gutenberg",
+    "*SMALL PRINT!",
+    "More information about this book is at the top of this file.",
+    "tells you about restrictions in how the file may be used.",
+//    "l'authorization à les utilizer pour preparer ce texte.",
+    "l'authorization",
+    "of the etext through OCR.",
+    "*****These eBooks Were Prepared By Thousands of Volunteers!*****",
+    "We need your donations more than ever!",
+    " *** START OF THIS PROJECT GUTENBERG",
+    "****     SMALL PRINT!",
+    "[\"Small Print\" V.",
+    "      (http://www.ibiblio.org/gutenberg/",
+    "and the Project Gutenberg Online Distributed Proofreading Team",
+    "Mary Meehan, and the Project Gutenberg Online Distributed Proofreading",
+    "                this Project Gutenberg edition.")
+    .aggregate(Trie.empty[Boolean])(
+    seqop = (trie, key) => trie.insert(key, true),
+    combop = (trie, _) => trie)
+
+  val textEndMarkers: Trie[Boolean] = Set(
+    "*** END OF THE PROJECT GUTENBERG",
+    "*** END OF THIS PROJECT GUTENBERG",
+    "***END OF THE PROJECT GUTENBERG",
+    "End of the Project Gutenberg",
+    "End of The Project Gutenberg",
+    "Ende dieses Project Gutenberg",
+    "by Project Gutenberg",
+    "End of Project Gutenberg",
+    "End of this Project Gutenberg",
+    "Ende dieses Projekt Gutenberg",
+    "        ***END OF THE PROJECT GUTENBERG",
+    "*** END OF THE COPYRIGHTED",
+    "End of this is COPYRIGHTED",
+    "Ende dieses Etextes ",
+    "Ende dieses Project Gutenber",
+    "Ende diese Project Gutenberg",
+    "**This is a COPYRIGHTED Project Gutenberg Etext, Details Above**",
+    "Fin de Project Gutenberg",
+    "The Project Gutenberg Etext of ",
+    "Ce document fut presente en lecture",
+    "Ce document fut pr",
+    "More information about this book is at the top of this file.",
+    "We need your donations more than ever!",
+    "END OF PROJECT GUTENBERG",
+    " End of the Project Gutenberg",
+    " *** END OF THIS PROJECT GUTENBERG"
+  ).aggregate(Trie.empty[Boolean])(
+    seqop = (trie, key) => trie.insert(key, true),
+    combop = (trie, _) => trie)
 
 }
