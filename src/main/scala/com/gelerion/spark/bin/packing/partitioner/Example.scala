@@ -1,9 +1,10 @@
 package com.gelerion.spark.bin.packing.partitioner
 
 import com.gelerion.spark.bin.packing.partitioner.domain.serde.BookshelfSerDe
-import com.gelerion.spark.bin.packing.partitioner.domain.{Bookshelf, BookshelfUrl, EBooksUrls, EbookText, EBookTerms}
+import com.gelerion.spark.bin.packing.partitioner.domain.{Bookshelf, BookshelfUrl, EBookTerms, EBooksUrls, EbookText}
 import com.gelerion.spark.bin.packing.partitioner.library.gutenberg.GutenbergLibrary
-import com.gelerion.spark.bin.packing.partitioner.service.TfIdf
+import com.gelerion.spark.bin.packing.partitioner.library.gutenberg.modifiers.{BookshelvesPersistentWriter, ThroughFileReader}
+import com.gelerion.spark.bin.packing.partitioner.service.{BinPacking, TfIdf}
 import org.apache.logging.log4j.scala.Logging
 import org.apache.spark.sql.{Dataset, KeyValueGroupedDataset, SparkSession}
 import org.apache.spark.sql.functions._
@@ -14,8 +15,6 @@ import scala.reflect.io.File
 object Example extends Logging {
 
   def main(args: Array[String]): Unit = {
-    val gutenbergLibrary = new GutenbergLibrary()
-
     val spark: SparkSession = SparkSession
       .builder()
       .appName("bin-packing")
@@ -23,23 +22,22 @@ object Example extends Logging {
       .getOrCreate()
 
     import spark.implicits._
+    implicit val bookshelfUrlToString: BookshelfUrl => String = bookshelfUrl => bookshelfUrl.value
 
-    //or calculate
-    val ebookUrlsPath = "/Users/denisshuvalov/Learning/Spark/bin-packing-partitioner/src/main/resources/ebook_urls.txt"
-
-    //val books: Dataset[Bookshelf] = spark.createDataset(gutenbergLibrary.getBookshelvesWithEbooks)
+    val gutenbergLibrary = new GutenbergLibrary
+      with ThroughFileReader
+      with BookshelvesPersistentWriter
 
     logger.info("*** GETTING URLS")
-    // Shortcut ----
-    val requested = 1
-    val source: BufferedSource = File("bookshelves").chars(Codec.UTF8)
-    val bookshelves: Seq[Bookshelf] = source.getLines().take(requested).flatMap(BookshelfSerDe.decode).flatten.toSeq
-    source.close()
+    val bookshelvesRequested = 20
+    val ebooksRequested = 1
+
+    val bookshelves: Seq[Bookshelf]= gutenbergLibrary.getBookshelvesWithEbooks
+      //limits push down
+      .take(bookshelvesRequested)
+      .map(bookshelf => bookshelf.copy(ebooks = bookshelf.ebooks.take(ebooksRequested)))
 
     val books: Dataset[Bookshelf] = spark.createDataset(bookshelves)
-    // ----
-
-    //val documentsCount = books.flatMap(_.ebooks).count()
 
     print("Bookshelves")
     books.show()
@@ -48,9 +46,30 @@ object Example extends Logging {
     val ebookUrls: Dataset[(BookshelfUrl, EBooksUrls)] = books.mapPartitions(bookshelves => {
       val gutenbergLibrary = new GutenbergLibrary()
       bookshelves.map(bookshelf => (BookshelfUrl(bookshelf.url), gutenbergLibrary.resolveEbookUrls(bookshelf)))
-    })
+    }).cache()
+
 
     print("Ebooks urls")
+
+    //part-mode
+    // - pack
+    // - partition 228
+    // - skew
+
+    //partitioner idx
+    val packingItems = ebookUrls.map { case (bookshelfUrl, ebookUrls) => (bookshelfUrl, ebookUrls.totalSize.toLong) }.collect()
+      .map { case (url, size) => (url.value, size) }
+      .toMap
+
+    for (elem <- BinPacking(packingItems).packNBins(3)) {
+      println(s"bin $elem")
+    }
+
+//    ebookUrls.rdd.partitionBy()
+
+
+    if (true) return
+
     ebookUrls.show()
 
     //TODO part-mods
@@ -64,14 +83,19 @@ object Example extends Logging {
       }
     }).cache()
 
+    corpus.show()
 
-    corpus.map {
-      case (bookshelfUrl, ebookTexts) => (bookshelfUrl, TfIdf.getTerms(ebookTexts))
+    //    logger.info("*** RUNNING TF-IDF ON TEXTS")
+    val booksTdIdf = corpus.map {
+      case (bookshelfUrl, ebookTexts) => (bookshelfUrl, TfIdf.calculate(ebookTexts))
     }
 
 
-//    logger.info("*** RUNNING TF-IDF ON TEXTS")
-    corpus.show()
+    for (arr <- booksTdIdf.collect()) {
+      println(arr._1)
+      println(arr._2)
+    }
+
     //(let [id-and-terms (su/cache (su/map-vals get-terms id-doc-pairs))]
     //[#tuple[bookshelf-url {:ebooks [[ebook-id text]] :size total-ebook-size}]]
 //    val terms: Dataset[(BookshelfUrl, Seq[EBookTerms])] = corpus.map {

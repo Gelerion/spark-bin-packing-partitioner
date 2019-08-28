@@ -6,6 +6,17 @@ https://jsofra.github.io/bin-packing-presentation/
 1. Find the book in each Gutenberg bookshelf that those terms are most important to.
 2. Find the Gutenberg bookshelf that those terms are most important to.
 
+1. Distributed TfIdf Calculation 
+2. Distributed Web Crawling / Html Parsing
+3. Bin Packing Partitioner
+
++ custom trie implementation
++ custom bin packing algorithm implementation
+scala features
++ stackable modifiers
++ using monad
++ type aliases
+
 # Data Skew
 How do you know if the computation is suffering from skewed data?
 1. Gangila metrics

@@ -1,4 +1,4 @@
-package com.gelerion.spark.bin.packing.partitioner.html.parser
+package com.gelerion.spark.bin.packing.partitioner.service.html.parser
 
 import net.ruippeixotog.scalascraper.browser.{Browser, JsoupBrowser}
 

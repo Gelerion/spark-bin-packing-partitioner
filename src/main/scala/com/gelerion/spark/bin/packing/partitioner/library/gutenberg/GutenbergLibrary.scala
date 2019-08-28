@@ -1,13 +1,11 @@
 package com.gelerion.spark.bin.packing.partitioner.library.gutenberg
 
-import java.nio.file.{Files, Paths}
-
 import com.gelerion.spark.bin.packing.partitioner.domain.serde.BookshelfSerDe
-import com.gelerion.spark.bin.packing.partitioner.domain.{Bookshelf, EBooksUrls, Ebook, EbookText, EbookUrl}
-import com.gelerion.spark.bin.packing.partitioner.html.parser.HtmlParser
+import com.gelerion.spark.bin.packing.partitioner.domain._
+import com.gelerion.spark.bin.packing.partitioner.service.html.parser.HtmlParser
 import com.gelerion.spark.bin.packing.partitioner.library.gutenberg.GutenbergLibrary.{textEndMarkers, textStartMarkers}
+import com.gelerion.spark.bin.packing.partitioner.service.WebClient
 import com.gelerion.spark.bin.packing.partitioner.utils.Trie
-import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import org.apache.logging.log4j.scala.Logging
 
 import scala.io.{BufferedSource, Codec}
@@ -18,7 +16,9 @@ import scala.reflect.io.File
 //read them online. You will find the world's great literature here, with focus on older works for which U.S.
 //copyright has expired. Thousands of volunteers digitized and diligently proofread the eBooks, for enjoyment and education.
 class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
-                       webClient: WebClient = WebClient()) extends Logging {
+                       webClient: WebClient = WebClient())
+  extends EbooksLibrary
+  with Logging {
   private val baseUrl = "https://www.gutenberg.org"
   private val bookshelfUrl1 = baseUrl + "/wiki/Category:Bookshelf"
   private val bookshelfUrl2 = baseUrl + "/w/index.php?title=Category:Bookshelf&pagefrom=The+Girls+Own+Paper+%28Bookshelf%29#mw-pages"
@@ -36,12 +36,27 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
 
   private val bookshelfHrefRegex = "^/wiki/.+\\(Bookshelf\\)"
 
-  def getEbooksTexts(ebooksUrls: EBooksUrls): Seq[EbookText] = {
+  override def getBookshelvesWithEbooks: Seq[Bookshelf] = {
+    logger.info("*** GETTING BOOK IDS")
+    //get-bookshelf-ids-and-titles!
+    getAllBookshelfUrls()
+      .map(bookshelfUrl => Bookshelf(bookshelfUrl, getEbookIdsAndTitles(bookshelfUrl).toSeq))
+      .toSeq
+  }
+
+  override def getEbooksTexts(ebooksUrls: EBooksUrls): Seq[EbookText] = {
     //get-ebook-texts
     ebooksUrls.booksUrls.map(bookUrl => {
       logger.debug(s"Getting text of ${bookUrl.ebook.id} - ${bookUrl.ebook.title}, ${bookUrl.url} ...")
       getEbookText(bookUrl)
     })
+  }
+
+  override def resolveEbookUrls(bookshelf: Bookshelf): EBooksUrls = {
+    //bookshelf-ebooks
+    logger.debug(s"Fetching ebook urls from ${bookshelf.url}")
+    val ebookUrls = getEbookUrls(bookshelf)
+    EBooksUrls(bookshelf.url, ebookUrls, ebookUrls.map(_.length).sum)
   }
 
   private def getEbookText(ebookUrl: EbookUrl): EbookText  = {
@@ -54,13 +69,6 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
     EbookText(ebookUrl.ebook, text)
   }
 
-  def resolveEbookUrls(bookshelf: Bookshelf): EBooksUrls = {
-    //bookshelf-ebooks
-    logger.debug(s"Fetching ebook urls from ${bookshelf.url}")
-    val ebookUrls = getEbookUrls(bookshelf)
-    EBooksUrls(bookshelf.url, ebookUrls, ebookUrls.map(_.length).sum)
-  }
-
   private def getEbookUrls(bookshelf: Bookshelf): Seq[EbookUrl] = {
     bookshelf.ebooks.flatMap(ebook => generateEbookUrl(ebook))
   }
@@ -70,14 +78,6 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
     logger.trace(s"Generating url for $ebook")
     webClient.generateUrlFor(ebook)
 
-  }
-
-  def getBookshelvesWithEbooks: Seq[Bookshelf] = {
-    logger.info("*** GETTING BOOK IDS")
-    //get-bookshelf-ids-and-titles!
-    getAllBookshelfUrls()
-      .map(bookshelfUrl => Bookshelf(bookshelfUrl, getEbookIdsAndTitles(bookshelfUrl).toSeq))
-      .toSeq
   }
 
   private def getEbookIdsAndTitles(bookshelfUrl: String): Iterable[Ebook] = {
@@ -144,10 +144,6 @@ object Test {
     val urls = bookshelves.map(library.resolveEbookUrls)
     urls.foreach(url => println(url))
     source.close()
-//
-
-
-
 
 //    val bookshelves = Seq(
 //      Bookshelf("url1", Seq(Ebook(1, "title1"), Ebook(2, "title2"))),

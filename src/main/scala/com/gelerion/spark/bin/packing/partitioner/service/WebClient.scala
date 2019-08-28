@@ -1,4 +1,4 @@
-package com.gelerion.spark.bin.packing.partitioner.library.gutenberg
+package com.gelerion.spark.bin.packing.partitioner.service
 
 import com.gelerion.spark.bin.packing.partitioner.domain.{Ebook, EbookUrl}
 import com.gelerion.spark.bin.packing.partitioner.http.client.HttpClient
@@ -26,7 +26,7 @@ case class WebClient(httpClient: HttpClient = new HttpClient) {
       })
       .dropWhile(_.isEmpty)
 
-    //head of empty stream throws exception, so we have to validate if stream isn't empty
+    //head on empty stream throws exception
     maybeUrlsStream match {
       case Stream.Empty => None
       case head #:: tail => head
