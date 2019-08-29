@@ -17,6 +17,7 @@ scala features
 + using monad
 + type aliases
 + rational type
++ mixin dependency injection
 
 # Data Skew
 How do you know if the computation is suffering from skewed data?

@@ -4,6 +4,7 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable
+import scala.language.implicitConversions
 
 /**
  * http://www.martinbroadhurst.com/bin-packing.html

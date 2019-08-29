@@ -1,6 +1,6 @@
 package com.gelerion.spark.bin.packing.partitioner.library.gutenberg
 
-import com.gelerion.spark.bin.packing.partitioner.domain.{Bookshelf, EBooksUrls, EbookText}
+import com.gelerion.spark.bin.packing.partitioner.domain.model.{Bookshelf, EBooksUrls, EbookText}
 
 trait EbooksLibrary {
 

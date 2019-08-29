@@ -1,6 +1,6 @@
 package com.gelerion.spark.bin.packing.partitioner.spark.partitioner
 
-import com.gelerion.spark.bin.packing.partitioner.domain.BookshelfUrl
+import com.gelerion.spark.bin.packing.partitioner.domain.model.BookshelfUrl
 import com.gelerion.spark.bin.packing.partitioner.service.BinsContainer
 import org.apache.spark.Partitioner
 

@@ -1,6 +1,7 @@
 package com.gelerion.spark.bin.packing.partitioner.service
 
-import com.gelerion.spark.bin.packing.partitioner.domain._
+import com.gelerion.spark.bin.packing.partitioner.domain.{model, _}
+import com.gelerion.spark.bin.packing.partitioner.domain.model.{BookshelfText, BookshelfUrl, Ebook, EbookText, EbookTfIdf}
 import com.gelerion.spark.bin.packing.partitioner.service.TfIdf.getTerms
 import com.gelerion.spark.bin.packing.partitioner.utils.Rational
 import org.apache.logging.log4j.scala.Logging
@@ -95,7 +96,7 @@ object TfIdf {
 
   implicit def ebookTextToMap(corpus: Seq[EbookText]): Map[Ebook, String] = corpus.map(ebook => (ebook.id, ebook.text)).toMap
   implicit def tfidfToEbookTfIdf(tfidf: Map[Ebook, TermsWeightsMap]): Seq[EbookTfIdf] = tfidf.map {
-    case (ebook, weights) => EbookTfIdf(ebook, weights)
+    case (ebook, weights) => model.EbookTfIdf(ebook, weights)
   }.toSeq
 
   def calculate(corpus: Seq[EbookText]): Seq[EbookTfIdf] = {

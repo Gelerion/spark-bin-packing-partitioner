@@ -1,7 +1,8 @@
 package com.gelerion.spark.bin.packing.partitioner.library.gutenberg
 
-import com.gelerion.spark.bin.packing.partitioner.domain.serde.BookshelfSerDe
 import com.gelerion.spark.bin.packing.partitioner.domain._
+import com.gelerion.spark.bin.packing.partitioner.domain.model.serde.BookshelfSerDe
+import com.gelerion.spark.bin.packing.partitioner.domain.model.{Bookshelf, EBooksUrls, Ebook, EbookText, EbookUrl}
 import com.gelerion.spark.bin.packing.partitioner.service.html.parser.HtmlParser
 import com.gelerion.spark.bin.packing.partitioner.library.gutenberg.GutenbergLibrary.{textEndMarkers, textStartMarkers}
 import com.gelerion.spark.bin.packing.partitioner.service.WebClient
@@ -36,6 +37,7 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
 
   private val bookshelfHrefRegex = "^/wiki/.+\\(Bookshelf\\)"
 
+  //todo lazy loading stream
   override def getBookshelvesWithEbooks: Seq[Bookshelf] = {
     logger.info("*** GETTING BOOK IDS")
     //get-bookshelf-ids-and-titles!

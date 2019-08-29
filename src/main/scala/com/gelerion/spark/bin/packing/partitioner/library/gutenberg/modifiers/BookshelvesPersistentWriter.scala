@@ -1,7 +1,7 @@
 package com.gelerion.spark.bin.packing.partitioner.library.gutenberg.modifiers
 
-import com.gelerion.spark.bin.packing.partitioner.domain.Bookshelf
-import com.gelerion.spark.bin.packing.partitioner.domain.serde.BookshelfSerDe
+import com.gelerion.spark.bin.packing.partitioner.domain.model.Bookshelf
+import com.gelerion.spark.bin.packing.partitioner.domain.model.serde.BookshelfSerDe
 import com.gelerion.spark.bin.packing.partitioner.library.gutenberg.EbooksLibrary
 
 import scala.reflect.io.File

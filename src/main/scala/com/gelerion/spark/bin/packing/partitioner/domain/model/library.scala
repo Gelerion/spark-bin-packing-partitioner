@@ -1,4 +1,4 @@
-package com.gelerion.spark.bin.packing.partitioner.domain
+package com.gelerion.spark.bin.packing.partitioner.domain.model
 
 object library
 case class Ebook(id: Int, title: String)

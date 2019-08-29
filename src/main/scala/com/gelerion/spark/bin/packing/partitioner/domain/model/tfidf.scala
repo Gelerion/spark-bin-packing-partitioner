@@ -1,4 +1,4 @@
-package com.gelerion.spark.bin.packing.partitioner.domain
+package com.gelerion.spark.bin.packing.partitioner.domain.model
 
 import com.gelerion.spark.bin.packing.partitioner.service.TermsWeightsMap
 import com.gelerion.spark.bin.packing.partitioner.utils.Rational

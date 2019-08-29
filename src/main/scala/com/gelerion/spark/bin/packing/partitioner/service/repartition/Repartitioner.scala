@@ -1,6 +1,6 @@
 package com.gelerion.spark.bin.packing.partitioner.service.repartition
 
-import com.gelerion.spark.bin.packing.partitioner.domain.{BookshelfUrl, EBooksUrls}
+import com.gelerion.spark.bin.packing.partitioner.domain.model.{BookshelfUrl, EBooksUrls}
 import com.gelerion.spark.bin.packing.partitioner.service.BinPacking
 import com.gelerion.spark.bin.packing.partitioner.spark.partitioner.BinPackingPartitioner
 import org.apache.logging.log4j.scala.Logging

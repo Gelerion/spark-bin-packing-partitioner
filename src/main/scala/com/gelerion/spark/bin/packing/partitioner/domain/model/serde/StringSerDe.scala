@@ -1,6 +1,6 @@
-package com.gelerion.spark.bin.packing.partitioner.domain.serde
+package com.gelerion.spark.bin.packing.partitioner.domain.model.serde
 
-import com.gelerion.spark.bin.packing.partitioner.domain.{Bookshelf, Ebook}
+import com.gelerion.spark.bin.packing.partitioner.domain.model.{Bookshelf, Ebook}
 
 import scala.util.Try
 
