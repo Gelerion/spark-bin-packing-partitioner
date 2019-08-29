@@ -1,30 +1,22 @@
 package com.gelerion.spark.bin.packing.partitioner.spark.partitioner
 
-import com.gelerion.spark.bin.packing.partitioner.domain.{BookshelfUrl, EBooksUrls}
-import org.apache.spark.{HashPartitioner, Partitioner}
-import org.apache.spark.sql.Dataset
-import org.apache.spark.util.Utils
-
-import scala.collection.immutable.ListMap
-import scala.collection.mutable
+import com.gelerion.spark.bin.packing.partitioner.domain.BookshelfUrl
+import com.gelerion.spark.bin.packing.partitioner.service.BinsContainer
+import org.apache.spark.Partitioner
 
 
-class BinPackingPartitioner(partitions: Int) extends Partitioner {
-  require(partitions >= 0, s"Number of partitions ($partitions) cannot be negative.")
+class BinPackingPartitioner(packedUrls: BinsContainer[BookshelfUrl]) extends Partitioner {
 
-  def numPartitions: Int = partitions
+  def numPartitions: Int = packedUrls.nbins
 
   def getPartition(key: Any): Int = key match {
     case null => 0
-    case _ => //implement
-      1
+    case _ => packedUrls.lookupItemIdx(key.asInstanceOf[BookshelfUrl]).get
   }
 
   override def equals(other: Any): Boolean = other match {
-    case h: HashPartitioner =>
-      h.numPartitions == numPartitions
-    case _ =>
-      false
+    case p: BinPackingPartitioner => p.numPartitions == numPartitions
+    case _ => false
   }
 
   override def hashCode: Int = numPartitions

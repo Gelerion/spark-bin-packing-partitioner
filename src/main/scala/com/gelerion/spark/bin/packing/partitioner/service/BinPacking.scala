@@ -14,8 +14,8 @@ import scala.collection.mutable
  *  - First Fit Decreasing (FFD)
  *  - Worst Fit Decreasing (WFD)
  */
-case class BinPacking(private val packingItems: Map[String, Long]) extends Logging {
-  import BinPacking.tupleToItem
+case class BinPacking[ItemType](private val packingItems: Map[ItemType, Long]) extends Logging {
+  implicit def tupleToItem(tuple: (ItemType, Long)): Item = Item(tuple._1, tuple._2)
 
   //example
   //6 groups of people, of group sizes 3,1,6,4,5 and 2 need to fit
@@ -51,17 +51,17 @@ case class BinPacking(private val packingItems: Map[String, Long]) extends Loggi
   //   arrange thing into the size of uor containers
   //   3 + 4, 6 + 1, 5 + 2
 
-  type Items = Map[String, Long]
-  type SortedItems = ListMap[String, Long]
-  type Bins = mutable.MutableList[Bin] //switch to RBTree or HeapTree for faster smallest bin lookups
+  type Items = Map[ItemType, Long]
+  type SortedItems = ListMap[ItemType, Long]
+  type Bins = mutable.MutableList[MutableBin] //switch to RBTree or HeapTree for faster smallest bin lookups
 
   /**
    * Simple first fit decreasing algorithm that continues to add to the smallest bin
    * once n bins have been filled to max-size
    */
-  def packNBins(nbins: Int) = {
+  def packNBins(nbins: Int): BinsContainer[ItemType] = {
     val bins = pack(sortDecreasing(packingItems), nbins)
-    List(bins.map(_.toImmutable))
+    BinsContainer(convertToImmutable(bins))
   }
 
 //  def packNBins(items: Items, nbins: Int) = {
@@ -75,24 +75,24 @@ case class BinPacking(private val packingItems: Map[String, Long]) extends Loggi
   /**
    * if maxSize isn't defined set max size to be equals to the first element size
    */
-  def firstFit(items: Items)(implicit noFitFn: (Bins, Bin) => Bins): Bins = {
+  def firstFit(items: Items)(implicit noFitFn: (Bins, MutableBin) => Bins): Bins = {
     logger.debug(s"Max bin size is ${items.head.size}")
     firstFit(items, items.head.size)
   }
 
-  def firstFit(items: Items, maxSize: Long)(implicit noFitFn: (Bins, Bin) => Bins = addNewBinToBins): Bins = {
-    val bins = mutable.MutableList[Bin]()
+  def firstFit(items: Items, maxSize: Long)(implicit noFitFn: (Bins, MutableBin) => Bins = addNewBinToBins): Bins = {
+    val bins = mutable.MutableList[MutableBin]()
     for (item <- items) {
       selectBin(bins, item, maxSize) match {
         case Some(bin) => bin.add(item)
-        case None => noFitFn(bins, Bin(item.size, mutable.Set(item.name)))
+        case None => noFitFn(bins, MutableBin(item.size, mutable.Set(item.name)))
       }
     }
 
     bins
   }
 
-  private def selectBin(bins: Bins, item: Item, maxSize: Long): Option[Bin] = {
+  private def selectBin(bins: Bins, item: Item, maxSize: Long): Option[MutableBin] = {
     for (bin <- bins) {
       if ((bin.size + item.size) <= maxSize) {
         return Some(bin)
@@ -102,18 +102,17 @@ case class BinPacking(private val packingItems: Map[String, Long]) extends Loggi
   }
 
   // --- no fit functions
-
-  private def addToSmallestBin(nbins: Int)(bins: Bins, bin: Bin): Bins = {
+  private def addToSmallestBin(nbins: Int)(bins: Bins, bin: MutableBin): Bins = {
     if (bins.size < nbins) addNewBinToBins(bins, bin)
     else selectSmallestBinAndAdd(bins, bin)
   }
 
-  private def selectSmallestBinAndAdd(bins: Bins, bin: Bin): Bins = {
+  private def selectSmallestBinAndAdd(bins: Bins, bin: MutableBin): Bins = {
     bins.min.add(bin)
     bins
   }
 
-  private def addNewBinToBins(bins: Bins, bin: Bin): Bins = {
+  private def addNewBinToBins(bins: Bins, bin: MutableBin): Bins = {
     bins += bin
   }
 
@@ -121,38 +120,60 @@ case class BinPacking(private val packingItems: Map[String, Long]) extends Loggi
   private def sortDecreasing(items: Items): SortedItems = {
     ListMap(items.toSeq.sortWith(_._2 > _._2):_ *)
   }
+
+  private def convertToImmutable(bins: Bins): List[Bin[ItemType]] = {
+    bins.map(_.toImmutable).toList
+  }
+
+  // --- domain objects, share the same generic key
+  case class Item(name: ItemType, size: Long)
+
+  case class MutableBin(var size: Long = 0, items: mutable.Set[ItemType] = mutable.Set.empty) extends Ordered[MutableBin] {
+    def add(item: Item): this.type = {
+      size += item.size
+      items += item.name
+      this
+    }
+
+    def add(that: MutableBin): this.type  = {
+      size += that.size
+      items ++= that.items
+      this
+    }
+
+    def toImmutable: Bin[ItemType] = Bin(size, items.toSet)
+
+    /*
+     *   - `x < 0` when `this < that`
+     *   - `x == 0` when `this == that`
+     *   - `x > 0` when  `this > that`
+     */
+    override def compare(that: MutableBin): Int = (this.size - that.size).toInt
+  }
 }
 
 object BinPacking {
-  implicit def tupleToItem(tuple: (String, Long)): Item = Item(tuple._1, tuple._2)
 
-  def apply(packingItems: Map[String, Long]) = new BinPacking(packingItems)
+  def apply[ItemType](packingItems: Map[ItemType, Long]) = new BinPacking(packingItems)
 }
 
-case class Item(name: String, size: Long)
+case class Bin[Item](size: Long, items: Set[Item])
 
-case class ImmutableBin[Keyword](size: Long, items: Set[Keyword])
-case class Bin(var size: Long = 0, items: mutable.Set[String] = mutable.Set.empty) extends Ordered[Bin]{
-  def add(item: Item): this.type = {
-    size += item.size
-    items += item.name
-    this
-  }
+case class BinsContainer[Item](private val bins: List[Bin[Item]]) extends Iterable[Bin[Item]] {
+  private lazy val invertedBinIndex: Map[Item, Int] = bins.zipWithIndex
+    .map(_.swap)
+    .flatMap { case (binIdx, bin) => bin.items.map(item => (item, binIdx)) }
+    .toMap
 
-  def add(that: Bin): this.type  = {
-    size += that.size
-    items ++= that.items
-    this
-  }
+  def lookupItemIdx(key: Item): Option[Int] = invertedBinIndex.get(key)
 
-  def toImmutable: ImmutableBin[String] = ImmutableBin(size, Set(items))
+  def getBins: List[Bin[Item]] = bins
 
-  /*
-   *   - `x < 0` when `this < that`
-   *   - `x == 0` when `this == that`
-   *   - `x > 0` when  `this > that`
-   */
-  override def compare(that: Bin): Int = (this.size - that.size).toInt
+  def binSizes: List[(String, Int)] = bins.zipWithIndex.map { case (bin, idx) => (s"Bin#$idx", bin.items.size) }
+
+  def nbins: Int = bins.length
+
+  override def iterator: Iterator[Bin[Item]] = bins.iterator
 }
 
 object MainPacking {
@@ -172,8 +193,15 @@ object MainPacking {
 
     println("pack")
 
-    for (bins <- binPacking.packNBins(4)) {
+    val packed = binPacking.packNBins(4)
+    for (bins <- packed) {
       println(bins)
     }
+
+    println("lookup by index")
+    println(s"k idx: ${packed.lookupItemIdx("k")}")
+    println(s"a idx: ${packed.lookupItemIdx("a")}")
+    println(s"f idx: ${packed.lookupItemIdx("f")}")
+
   }
 }

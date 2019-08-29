@@ -1,11 +1,9 @@
 package com.gelerion.spark.bin.packing.partitioner.service
 
-import com.gelerion.spark.bin.packing.partitioner.domain.{EBookTerms, Ebook, EbookText, EbookTfIdf}
-import com.gelerion.spark.bin.packing.partitioner.service.TfIdf.stopWord
+import com.gelerion.spark.bin.packing.partitioner.domain._
+import com.gelerion.spark.bin.packing.partitioner.service.TfIdf.getTerms
 import com.gelerion.spark.bin.packing.partitioner.utils.Rational
 import org.apache.logging.log4j.scala.Logging
-
-import scala.collection.immutable.ListMap
 
 /**
  * https://www.onely.com/blog/what-is-tf-idf/
@@ -14,9 +12,10 @@ import scala.collection.immutable.ListMap
  * The higher the numerical weight value, the rarer the term.
  * The smaller the weight, the more common the term.
  */
-case class TfIdf(corpus: Seq[EbookText]) extends Logging {
+case class TfIdf[DocId](corpus: Map[DocId, String]) extends Logging {
+  //Seq(EbookText)
   
-  def calculate(): Seq[EbookTfIdf] = {
+  def calculate(): Map[DocId, TermsWeightsMap] = {
     val (tfs, idf) = calcTfAndIdf
 
     //idf has all the words across documents
@@ -26,9 +25,9 @@ case class TfIdf(corpus: Seq[EbookText]) extends Logging {
       //Map[Ebook, Map[String, Double]]
       .mapValues(termWeights => {
         //sort by term weigh desc, take the most significant only
-        ListMap(termWeights.toSeq.sortWith(_._2 > _._2).take(500): _*)
+        val mostSignificantTerms = termWeights.toSeq.sortWith(_._2 > _._2).take(500)
+        TermsWeightsMap(Map(mostSignificantTerms: _*))
       })
-      .toSeq.map { case (ebook, tfidf) => EbookTfIdf(ebook, tfidf) }
   }
 
   /**
@@ -40,9 +39,10 @@ case class TfIdf(corpus: Seq[EbookText]) extends Logging {
     freq.value * idf
   }
 
-  private def calcTfAndIdf: (Map[Ebook, Map[String, Rational]], Map[String, Double]) = {
+  private def calcTfAndIdf: (Map[DocId, Map[String, Rational]], Map[String, Double]) = {
     //calc-tf-and-idf [id-doc-pairs]
-    val idAndTerms = corpus.map(ebook => (ebook.id, getTerms(ebook.text))).toMap
+
+    val idAndTerms = corpus.mapValues(getTerms)
     val tfs = idAndTerms.map {case (id, terms) => (id, tf(terms))}
 
     val docsCount = corpus.size
@@ -87,8 +87,26 @@ case class TfIdf(corpus: Seq[EbookText]) extends Logging {
   private def calcTf(nTerms: Int)(termFreq: Int): Rational = {
     Rational(termFreq, nTerms)
   }
+}
 
-  private def getTerms(text: String): Stream[String] = {
+object TfIdf {
+  private val stopWord: Set[String] = Set("","a","all","and","any","are","is","in","of","on",
+    "or","our","so","this","the","that","to","we","it","for")
+
+  implicit def ebookTextToMap(corpus: Seq[EbookText]): Map[Ebook, String] = corpus.map(ebook => (ebook.id, ebook.text)).toMap
+  implicit def tfidfToEbookTfIdf(tfidf: Map[Ebook, TermsWeightsMap]): Seq[EbookTfIdf] = tfidf.map {
+    case (ebook, weights) => EbookTfIdf(ebook, weights)
+  }.toSeq
+
+  def calculate(corpus: Seq[EbookText]): Seq[EbookTfIdf] = {
+    new TfIdf(corpus).calculate()
+  }
+
+  def calculate(url: BookshelfUrl, bookshelf: BookshelfText): Map[String, TermsWeightsMap] = {
+    new TfIdf(Map(url.value -> bookshelf.text)).calculate()
+  }
+
+  def getTerms(text: String): Stream[String] = {
     splitWord(text).filterNot(stopWord)
   }
 
@@ -97,19 +115,21 @@ case class TfIdf(corpus: Seq[EbookText]) extends Logging {
   }
 }
 
-object TfIdf {
-  private val stopWord: Set[String] = Set("","a","all","and","any","are","is","in","of","on",
-    "or","our","so","this","the","that","to","we","it","for")
+//term to weight -- extends ListMap
+case class TermsWeightsMap(/*private*/ val dict: Map[String, Double]) extends Iterable[TermWeight]  {
+  type Term = String
+  type Weight = Double
 
-  def calculate(corpus: Seq[EbookText]): Seq[EbookTfIdf] = {
-    new TfIdf(corpus).calculate()
-  }
+  def getTermWeight(term: Term): Weight = dict.getOrElse(term, 0D)
+
+  override def iterator: Iterator[TermWeight] = dict.map(vals => TermWeight(vals._1, vals._2)).iterator
 }
-
+case class TermWeight(term: String, weight: Double)
 
 object testTfIdf {
 
   def main(args: Array[String]): Unit = {
+    import TfIdf.ebookTextToMap
     /*
     tf-idf [id-doc-pairs] / ebooks-tf-idf #(-> % :ebooks tf-idf/tf-idf) bs-texts
     (#sparkling/tuple["https://www.gutenberg.org/wiki/Adventure_(Bookshelf)"
@@ -127,7 +147,7 @@ object testTfIdf {
       EbookText(Ebook(123, "Dauni"), "yh ui op")
     )
 
-    val tfIdf: TfIdf = TfIdf(corpus)
+    val tfIdf: TfIdf[Ebook] = TfIdf(corpus)
     println(tfIdf.calculate())
 
     //println(tfIdf.calc())

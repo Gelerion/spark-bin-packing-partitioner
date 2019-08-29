@@ -1,5 +1,5 @@
-My adoption of Spark bin packing algorithm initially written in Clojure. 
-Hopefully in a more readable way. I am not aiming to show some OO or FP best practice. 
+My adoption to Spark 2.4 of bin packing algorithm initially written in Clojure. 
+Hopefully in a more readable way.  
 
 https://jsofra.github.io/bin-packing-presentation/
 
@@ -16,6 +16,7 @@ scala features
 + stackable modifiers
 + using monad
 + type aliases
++ rational type
 
 # Data Skew
 How do you know if the computation is suffering from skewed data?
