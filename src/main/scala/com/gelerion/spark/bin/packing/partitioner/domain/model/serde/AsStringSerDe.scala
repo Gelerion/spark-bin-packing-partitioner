@@ -4,12 +4,12 @@ import com.gelerion.spark.bin.packing.partitioner.domain.model.{Bookshelf, Ebook
 
 import scala.util.Try
 
-trait StringSerDe[T] {
+trait AsStringSerDe[T] {
   def encode(item: T): String
   def decode(str: String): Option[T]
 }
 
-object BookshelfSerDe extends StringSerDe[Seq[Bookshelf]] {
+object BookshelfSerDe extends AsStringSerDe[Seq[Bookshelf]] {
   private val urlSeparator: String = "%%%"
   private val ebookSeparator: String = "##"
   private val idTitleSeparator: String = "!!!"

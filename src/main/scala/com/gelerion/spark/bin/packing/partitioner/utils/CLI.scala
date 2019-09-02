@@ -12,6 +12,7 @@ class CLI(arguments: Seq[String]) extends ScallopConf(arguments) {
   )
 
   val partMode = choice(
+    name = "part-mode",
     choices = Seq("skew", "pack", "partition"),
     default = Some("skew")
   )
@@ -26,6 +27,18 @@ class CLI(arguments: Seq[String]) extends ScallopConf(arguments) {
     name = "limit-ebooks-per-bookshelf",
     descr = "How many ebooks to load per bookshelf",
     default = None
+  )
+
+  val outputDirectory = opt[String](
+    name = "output-directory",
+    descr = "Where to store our new shiny index?",
+    default = Some("tfidfIndex")
+  )
+
+  val searchQuery = opt[String](
+    name = "search-query",
+    descr = "Search for relevant ebooks",
+    default = Some("how to cook dinner for forty large human people")
   )
 
   verify()

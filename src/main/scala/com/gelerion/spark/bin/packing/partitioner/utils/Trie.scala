@@ -1,35 +1,5 @@
 package com.gelerion.spark.bin.packing.partitioner.utils
 
-import com.gelerion.spark.bin.packing.partitioner.library.gutenberg.GutenbergLibrary
-
-object test {
-  def main(args: Array[String]): Unit = {
-//    val trie = Trie[Boolean]
-//      .insert("abc", true)
-//      .insert("abv", true)
-//      .insert("aev", true)
-//      .insert("aec", true)
-//      .insert("*** START OF THIS PROJECT GUTENBERG", true)
-
-
-    val str = "Title: Prester John\n\nAuthor: John Buchan\n\nPosting Date: October 10, 2008 [EBook #611]\nRelease Date: August, 1996\n[Last updated: August 19, 2012]\n\nLanguage: English\n\nCharacter set encoding: ASCII\n\n*** START OF THIS PROJECT GUTENBERG EBOOK PRESTER JOHN ***\n\n\n\n\nProduced by Jo Churcher.  HTML version by Al Haines.\nPRESTER JOHN\n\n\nby\n\nJOHN BUCHAN\n\n\n\n\nTO\n\nLIONEL PHILLIPS\n*** END OF THIS PROJECT GUTENBERG EBOOK PRESTER JOHN ***\n\n***** This file should be named 611.txt or 611.zip *****\nThis and all associated files of various formats will be found in:\n        http://www.gutenberg.org/6/1/611/\n\nProduced by Jo Churcher.  HTML version by Al Haines."
-//    println(str.split("\n")
-//      .toStream
-//      .dropWhile(line => !GutenbergLibrary.textStartMarkers.startsWith(line))
-//      .tail
-//      .takeWhile(line => !GutenbergLibrary.textEndMarkers.startsWith(line))
-//      .mkString(""))
-
-
-//      .map(line => {
-//      if (trie.startsWith(line)) { println(s"True for $line"); true } else false
-
-
-//    println(trie.search("abcd"))
-//    println(trie.startsWith("aecsdd"))
-  }
-}
-
 case class Trie[V](value: Option[V], children: List[Option[Trie[V]]], childrenAreEmpty: Boolean = true) {
 
   def insert(key: String, value: V): Trie[V] = Trie.insert(this, key, value, 0)
@@ -101,4 +71,32 @@ object Trie {
           node.copy(children = newChildren)
       }
     }
+}
+
+object test {
+  def main(args: Array[String]): Unit = {
+    //    val trie = Trie[Boolean]
+    //      .insert("abc", true)
+    //      .insert("abv", true)
+    //      .insert("aev", true)
+    //      .insert("aec", true)
+    //      .insert("*** START OF THIS PROJECT GUTENBERG", true)
+
+
+    val str = "Title: Prester John\n\nAuthor: John Buchan\n\nPosting Date: October 10, 2008 [EBook #611]\nRelease Date: August, 1996\n[Last updated: August 19, 2012]\n\nLanguage: English\n\nCharacter set encoding: ASCII\n\n*** START OF THIS PROJECT GUTENBERG EBOOK PRESTER JOHN ***\n\n\n\n\nProduced by Jo Churcher.  HTML version by Al Haines.\nPRESTER JOHN\n\n\nby\n\nJOHN BUCHAN\n\n\n\n\nTO\n\nLIONEL PHILLIPS\n*** END OF THIS PROJECT GUTENBERG EBOOK PRESTER JOHN ***\n\n***** This file should be named 611.txt or 611.zip *****\nThis and all associated files of various formats will be found in:\n        http://www.gutenberg.org/6/1/611/\n\nProduced by Jo Churcher.  HTML version by Al Haines."
+    //    println(str.split("\n")
+    //      .toStream
+    //      .dropWhile(line => !GutenbergLibrary.textStartMarkers.startsWith(line))
+    //      .tail
+    //      .takeWhile(line => !GutenbergLibrary.textEndMarkers.startsWith(line))
+    //      .mkString(""))
+
+
+    //      .map(line => {
+    //      if (trie.startsWith(line)) { println(s"True for $line"); true } else false
+
+
+    //    println(trie.search("abcd"))
+    //    println(trie.startsWith("aecsdd"))
+  }
 }

@@ -6,6 +6,8 @@ import com.gelerion.spark.bin.packing.partitioner.service.TfIdf.getTerms
 import com.gelerion.spark.bin.packing.partitioner.utils.Rational
 import org.apache.logging.log4j.scala.Logging
 
+import scala.language.implicitConversions
+
 /**
  * https://www.onely.com/blog/what-is-tf-idf/
  *
@@ -23,7 +25,7 @@ case class TfIdf[DocId](corpus: Map[DocId, String]) extends Logging {
     tfs.mapValues(tf => {
       tf.map { case (term, docFreq) => (term, calcTermWeight(docFreq, idf.getOrElse(term, 0D))) }
     })
-      //Map[Ebook, Map[String, Double]]
+      //Map[DocId, Map[Term, Weight]]
       .mapValues(termWeights => {
         //sort by term weigh desc, take the most significant only
         val mostSignificantTerms = termWeights.toSeq.sortWith(_._2 > _._2).take(500)

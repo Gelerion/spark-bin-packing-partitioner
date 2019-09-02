@@ -1,25 +1,24 @@
 package com.gelerion.spark.bin.packing.partitioner.domain.repository
 
 import com.gelerion.spark.bin.packing.partitioner.domain.model.Bookshelf
-import com.gelerion.spark.bin.packing.partitioner.library.gutenberg.GutenbergLibrary
-import com.gelerion.spark.bin.packing.partitioner.utils.{Args, SparkHolder}
+import com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg.GutenbergLibrary
+import com.gelerion.spark.bin.packing.partitioner.spark.SparkHolder
+import com.gelerion.spark.bin.packing.partitioner.utils.Args
 import org.apache.logging.log4j.scala.Logging
 import org.apache.spark.sql.Dataset
 
 trait EbooksLibraryRepository {
 
-  def getBooks(): Dataset[Bookshelf]
+  def getBookshelves(): Dataset[Bookshelf]
 
 }
 
 abstract class GutenbergRepository extends EbooksLibraryRepository with Logging {
   val gutenbergLibrary: GutenbergLibrary //depends on
 
-  override def getBooks(): Dataset[Bookshelf] = {
+  override def getBookshelves(): Dataset[Bookshelf] = {
     val spark = SparkHolder.getSpark
     import spark.implicits._
-
-//    val gutenbergLibrary = new GutenbergLibrary with ThroughFileReader with BookshelvesPersistentWriter
 
     logger.info("*** GETTING URLS")
     val bookshelves: Seq[Bookshelf]= withLimitsPushDown(gutenbergLibrary.getBookshelvesWithEbooks)

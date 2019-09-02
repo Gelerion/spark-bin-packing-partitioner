@@ -1,7 +1,7 @@
 package com.gelerion.spark.bin.packing.partitioner.service
 
 import com.gelerion.spark.bin.packing.partitioner.domain.model.{Ebook, EbookUrl}
-import com.gelerion.spark.bin.packing.partitioner.http.client.HttpClient
+import com.gelerion.spark.bin.packing.partitioner.service.http.client.HttpClient
 
 import scala.util.{Failure, Success}
 

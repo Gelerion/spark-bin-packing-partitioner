@@ -1,5 +1,6 @@
-package com.gelerion.spark.bin.packing.partitioner.utils
+package com.gelerion.spark.bin.packing.partitioner.spark
 
+import com.gelerion.spark.bin.packing.partitioner.utils.{Args, CLI}
 import org.apache.spark.sql.SparkSession
 
 object SparkHolder {

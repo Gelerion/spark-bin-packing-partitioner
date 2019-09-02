@@ -1,10 +1,10 @@
-package com.gelerion.spark.bin.packing.partitioner.library.gutenberg
+package com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg
 
 import com.gelerion.spark.bin.packing.partitioner.domain._
 import com.gelerion.spark.bin.packing.partitioner.domain.model.serde.BookshelfSerDe
 import com.gelerion.spark.bin.packing.partitioner.domain.model.{Bookshelf, EBooksUrls, Ebook, EbookText, EbookUrl}
 import com.gelerion.spark.bin.packing.partitioner.service.html.parser.HtmlParser
-import com.gelerion.spark.bin.packing.partitioner.library.gutenberg.GutenbergLibrary.{textEndMarkers, textStartMarkers}
+import com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg.GutenbergLibrary.{textEndMarkers, textStartMarkers}
 import com.gelerion.spark.bin.packing.partitioner.service.WebClient
 import com.gelerion.spark.bin.packing.partitioner.utils.Trie
 import org.apache.logging.log4j.scala.Logging
@@ -79,7 +79,6 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
     //generate-ebook-urls
     logger.trace(s"Generating url for $ebook")
     webClient.generateUrlFor(ebook)
-
   }
 
   private def getEbookIdsAndTitles(bookshelfUrl: String): Iterable[Ebook] = {

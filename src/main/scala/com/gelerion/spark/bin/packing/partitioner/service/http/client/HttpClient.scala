@@ -1,4 +1,4 @@
-package com.gelerion.spark.bin.packing.partitioner.http.client
+package com.gelerion.spark.bin.packing.partitioner.service.http.client
 
 import java.nio.charset.StandardCharsets
 
