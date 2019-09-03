@@ -9,14 +9,14 @@ import org.apache.spark.sql.Dataset
 
 trait EbooksLibraryRepository {
 
-  def getBookshelves(): Dataset[Bookshelf]
+  def getBookshelves: Dataset[Bookshelf]
 
 }
 
 abstract class GutenbergRepository extends EbooksLibraryRepository with Logging {
   val gutenbergLibrary: GutenbergLibrary //depends on
 
-  override def getBookshelves(): Dataset[Bookshelf] = {
+  override def getBookshelves: Dataset[Bookshelf] = {
     val spark = SparkHolder.getSpark
     import spark.implicits._
 

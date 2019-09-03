@@ -119,7 +119,7 @@ object TfIdf {
 }
 
 //term to weight -- extends ListMap
-case class TermsWeightsMap(/*private*/ val dict: Map[String, Double]) extends Iterable[TermWeight]  {
+case class TermsWeightsMap(/*private val*/ dict: Map[String, Double]) extends Iterable[TermWeight]  {
   type Term = String
   type Weight = Double
 

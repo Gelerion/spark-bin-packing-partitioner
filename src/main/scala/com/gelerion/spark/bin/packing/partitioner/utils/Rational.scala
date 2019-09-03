@@ -1,5 +1,7 @@
 package com.gelerion.spark.bin.packing.partitioner.utils
 
+import scala.annotation.tailrec
+
 case class Rational(n: Int, d: Int) {
   //Scala compiler will compile any code you place in the class body, which isn't part of a field or a method definition, into the primary constructor.
   //----------------------------------------------
@@ -15,7 +17,7 @@ case class Rational(n: Int, d: Int) {
 
   def this(n: Int) = this(1, n) // auxiliary constructor
 
-  override def toString = numer + "/" + denom
+  override def toString: String = numer + "/" + denom
 
   def + (that: Rational): Rational = {
     new Rational(
@@ -43,10 +45,10 @@ case class Rational(n: Int, d: Int) {
 
   def value: Double = numer.toDouble / denom
 
-  def lessThan(that: Rational) = this.numer * that.denom < that.numer * this.denom
+  def lessThan(that: Rational): Boolean = this.numer * that.denom < that.numer * this.denom
 
   //greatest common divisor
-  private def gcd(a: Int, b: Int): Int = {
+  @tailrec private def gcd(a: Int, b: Int): Int = {
     if(b == 0) a else gcd(b, a % b)
   }
 }

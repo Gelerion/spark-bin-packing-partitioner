@@ -65,9 +65,10 @@ case class BinPacking[ItemType](private val packingItems: Map[ItemType, Long]) e
     BinsContainer(convertToImmutable(bins))
   }
 
-//  def packNBins(items: Items, nbins: Int) = {
-//    pack(sortDecreasing(items), nbins)
-//  }
+  def packMaxCapacity(binMaxCapacity: Int): BinsContainer[ItemType] = {
+    val bins = firstFit(sortDecreasing(packingItems), binMaxCapacity)
+    BinsContainer(convertToImmutable(bins))
+  }
 
   private def pack(items: SortedItems, nbins: Int) = {
     firstFit(items)(noFitFn = addToSmallestBin(nbins))
@@ -109,6 +110,7 @@ case class BinPacking[ItemType](private val packingItems: Map[ItemType, Long]) e
   }
 
   private def selectSmallestBinAndAdd(bins: Bins, bin: MutableBin): Bins = {
+    //if (bins.isEmpty) return addNewBinToBins(bins, bin)
     bins.min.add(bin)
     bins
   }
@@ -154,7 +156,6 @@ case class BinPacking[ItemType](private val packingItems: Map[ItemType, Long]) e
 }
 
 object BinPacking {
-
   def apply[ItemType](packingItems: Map[ItemType, Long]) = new BinPacking(packingItems)
 }
 
@@ -170,7 +171,8 @@ case class BinsContainer[Item](private val bins: List[Bin[Item]]) extends Iterab
 
   def getBins: List[Bin[Item]] = bins
 
-  def binSizes: List[(String, Int)] = bins.zipWithIndex.map { case (bin, idx) => (s"Bin#$idx", bin.items.size) }
+  def binItemsCount: List[(String, Int)] = bins.zipWithIndex.map { case (bin, idx) => (s"Bin#$idx", bin.items.size) }
+  def binSizes: List[Long] = bins.zipWithIndex.map { case (bin, _) => bin.size }
 
   def nbins: Int = bins.length
 
@@ -203,6 +205,13 @@ object MainPacking {
     println(s"k idx: ${packed.lookupItemIdx("k")}")
     println(s"a idx: ${packed.lookupItemIdx("a")}")
     println(s"f idx: ${packed.lookupItemIdx("f")}")
+
+    //6 groups of people, of group sizes 3,1,6,4,5 and 2 need to fit
+    //onto minibuses with capacity 7 but must stay together in their groups.
+    //Find the number of minibuses need to pack them un efficiently and so that each group stays together
+    val groupSizes = Map(1 -> 3, 2 -> 1, 3 -> 6, 4 -> 4, 5 -> 5, 6 -> 2)
+//    val
+//    BinPacking(groupSizes).packNBins()
 
   }
 }

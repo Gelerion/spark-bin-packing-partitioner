@@ -33,7 +33,7 @@ object IndexBuilder extends Logging {
     import spark.implicits._
 
     // 1. Parse Gutenberg web page
-    val bookshelves: Dataset[Bookshelf] = gutenbergRepository.getBookshelves()
+    val bookshelves: Dataset[Bookshelf] = gutenbergRepository.getBookshelves
 
     // 2. For each ebook resolve url with text
     val ebookUrls = bookshelves.mapPartitions(bookshelves => {

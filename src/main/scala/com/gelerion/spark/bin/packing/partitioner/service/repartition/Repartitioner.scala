@@ -19,12 +19,12 @@ case class BinPackingRepartitioner(ebookUrls: Dataset[(BookshelfUrl, EBooksUrls)
 
   override def repartition(partitions: Int)
                           (implicit enc: Encoder[(BookshelfUrl, Long)]): RDD[(BookshelfUrl, EBooksUrls)] = {
-    val packingItems = ebookUrls.map { case (bookshelfUrl, ebookUrls) => (bookshelfUrl, ebookUrls.totalSize.toLong) }.collect()
+    val packingItems = ebookUrls.map { case (bookshelfUrl, ebookUrls) => (bookshelfUrl, ebookUrls.totalTextSize.toLong) }.collect()
       //.map { case (url, size) => (url.value, size) }
       .toMap
 
     val packedUrlsIntoBins = BinPacking(packingItems).packNBins(partitions)
-    logger.debug(s"Packed into ${packedUrlsIntoBins.nbins} bins, sizes ${packedUrlsIntoBins.binSizes}")
+    logger.debug(s"Packed into ${packedUrlsIntoBins.nbins} bins, sizes ${packedUrlsIntoBins.binItemsCount}")
 
     ebookUrls.rdd.partitionBy(new BinPackingPartitioner(packedUrlsIntoBins))
   }

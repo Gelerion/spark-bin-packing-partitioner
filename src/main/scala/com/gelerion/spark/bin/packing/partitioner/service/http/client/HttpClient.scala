@@ -8,7 +8,7 @@ import scala.util.Try
 
 class HttpClient {
 
-  private implicit val backend = HttpURLConnectionBackend()
+  private implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
 
   def head[T](url: String)(handler: Try[Id[Response[String]]] => T): T = {
     val request: Request[String, Nothing] = sttp.head(uri"$url")
