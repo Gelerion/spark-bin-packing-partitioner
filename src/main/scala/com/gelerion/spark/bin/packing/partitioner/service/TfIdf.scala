@@ -16,14 +16,13 @@ import scala.language.implicitConversions
  * The smaller the weight, the more common the term.
  */
 case class TfIdf[DocId](corpus: Map[DocId, String]) extends Logging {
-  //Seq(EbookText)
-  
+
   def calculate(): Map[DocId, TermsWeightsMap] = {
     val (tfs, idf) = calcTfAndIdf
 
     //idf has all the words across documents
     tfs.mapValues(tf => {
-      tf.map { case (term, docFreq) => (term, calcTermWeight(docFreq, idf.getOrElse(term, 0D))) }
+      tf.map { case (term, freqOfTermInDoc) => (term, calcTermWeight(freqOfTermInDoc, idf.getOrElse(term, 0D))) }
     })
       //Map[DocId, Map[Term, Weight]]
       .mapValues(termWeights => {
@@ -109,13 +108,37 @@ object TfIdf {
     new TfIdf(Map(url.value -> bookshelf.text)).calculate()
   }
 
+  def calculate(docs: Map[String, String]): TfIdfIndex = TfIdfIndex(TfIdf(docs).calculate())
+
   def getTerms(text: String): Stream[String] = {
     splitWord(text).filterNot(stopWord)
+  }
+
+  def tf(docs: Map[String, String]): Map[String, TermsWeightsMap] = {
+    val (tfs, _) = TfIdf(docs).calcTfAndIdf
+    tfs.mapValues(docTf => TermsWeightsMap(docTf.mapValues(_.value)))
+  }
+
+  def idf(docs: Map[String, String]): Map[String, Double] = {
+    val (_, idf) = TfIdf(docs).calcTfAndIdf
+    idf
   }
 
   private def splitWord(text: String): Stream[String] = {
     text.toLowerCase.split("\\W+").toStream
   }
+}
+
+case class TfIdfIndex(private val tfIdfPerDoc: Map[String, TermsWeightsMap]) {
+  type Term = String
+  type DocId = String
+  //private lazy val invertedTermsIndex: Map[Term, DocId] = tfIdfPerDoc
+
+  //create an inverted index and do not sort terms each invocation
+  def getTopNSignatureWordsFor(docId: DocId, topN: Int): Option[List[TermWeight]] = {
+    tfIdfPerDoc.get(docId).map(tfidf => tfidf.terms.toList.sorted.reverse.take(topN))
+  }
+
 }
 
 //term to weight -- extends ListMap
@@ -125,9 +148,14 @@ case class TermsWeightsMap(/*private val*/ dict: Map[String, Double]) extends It
 
   def getTermWeight(term: Term): Weight = dict.getOrElse(term, 0D)
 
-  override def iterator: Iterator[TermWeight] = dict.map(vals => TermWeight(vals._1, vals._2)).iterator
+  def terms: Iterator[TermWeight] = iterator
+
+  override def iterator: Iterator[TermWeight] = dict.map { case (term, weight) => TermWeight(term, weight) }.iterator
+
 }
-case class TermWeight(term: String, weight: Double)
+case class TermWeight(term: String, weight: Double) extends Ordered[TermWeight] {
+  override def compare(that: TermWeight): Int = (this.weight - that.weight).toInt
+}
 
 object testTfIdf {
 

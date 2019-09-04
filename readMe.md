@@ -23,13 +23,11 @@ search query
 3. Bin Packing Partitioner
 4. Trie Implementation
 
----
- 
-#####`Scala` specific stuff
-- stackable modifiers
-- type aliases
-- rational type
-- mixin dependency injection
+##### `Scala` specific stuff
+1. stackable modifiers
+2. type aliases
+3. rational type
+4. mixin dependency injection
 
 # Data Skew
 ![Screenshot](images/data_skew.png)  
@@ -47,14 +45,17 @@ Gutenberg library:
  - Standard deviation ~ 121
 
 
-How do you know if the computation is suffering from skewed data?
-1. Gangila/Grafana metrics
+#### How do you know if the computation is suffering from skewed data?
+1. Gangila/Grafana metrics  
+![Screenshot](images/gangila_cluster_load.png) ![Screenshot](images/gangila_cluster_load_2.png)  
+shows uneven distribution of work across the cluster
 2. Spark UI
 ![Screenshot](images/skew_ui_spark.png)  
+199 are finished and waiting for a single task
 
-#Partitioning
+# Partitioning
 
-####Partition into exact number of bookshelves
+#### Partition into exact number of bookshelves
  - Overhead from small tasks
  - Poor scheduling
  - Not enough hardware
@@ -78,9 +79,9 @@ The problem roughly falls into a class of optimization problems known as packing
 These are NP-hard problems so we will need to make use of heuristical methods or 
 possibly a constraint solver.  
 
-####Bin Packing
+#### Bin Packing
 ![Screenshot](images/bin_packing.png)   
-[image source](http://www.martinbroadhurst.com/bin-packing.html)  
+[image source](http://www.martinbroadhurst.com/bin-packing.html)   
 Our problem seems most closely related to the Bin packing problem (minimum number of bins 
 of a certain volume) or maybe the Multiprocessor scheduling problem (pack into a specific 
 number of bins)  
@@ -89,8 +90,8 @@ Bin Packing Methods:
 1. First Fit (smallest number of fixed sized bins)
 2. First Fit + Smallest Bin (fixed number of bins)
 
-Implementation:
-```
+Code example
+```scala
 case class BinPacking[ItemType](packingItems: Map[ItemType, ItemSize]) {
   
   def packNBins(nbins: Int): BinsContainer[ItemType] = pack(sortDecreasing(packingItems), nbins)
@@ -120,15 +121,15 @@ case class BinPacking[ItemType](packingItems: Map[ItemType, ItemSize]) {
 }
 ```
 
-- Now we could pack items into fixed size bins
+It helps us to solve the following problems:  
+1. Pack into containers of volume V in a way that minimizes the number of bins used  
 ```
 6 groups of people, of group sizes 3,1,6,4,5 and 2 need to fit
 onto minibuses with capacity 7 but must stay together in their groups.
 Find the number of minibuses need to pack them un efficiently and so that each group stays together
 ```
-
 Solution:
-```
+```scala
 it should "pack 6 groups of people, of group sizes 3, 1, 6, 4, 5 and 2 onto minibuses with capacity 7" in {
   //find the number of minibuses need to pack them un efficiently and so that each group stays together
   val groupSizes = Map(1 -> 3L, 2 -> 1L, 3 -> 6L, 4 -> 4L, 5 -> 5L, 6 -> 2L)
@@ -140,8 +141,26 @@ it should "pack 6 groups of people, of group sizes 3, 1, 6, 4, 5 and 2 onto mini
 }
 ```
 
-- Or to pack into N almost equally sized bins 
+2. Pack into a finite number of bins
 ```
+Pack items into N partitions so that each partition will have to execute almost the same amount of work
+```
+Solution:
+```scala
+it should "packNBins into 4 equally sized bins" in {
+    val partitons = 4 
+    val items: Map[String, Long] = Map("a" -> 1L, "b" -> 4, "c" -> 9, "d" -> 4, "e" -> 1, "f" -> 5,
+      "g" -> 8, "h" -> 3, "i" -> 2, "j" -> 5, "k" -> 7, "l" -> 3, "m" -> 2, "n" -> 6)
+
+    val packed = BinPacking(items).packNBins(partitons)
+
+    assert(packed.nbins == partitons)
+    assert(packed.binSizes.equals(List(15L, 15L, 15L, 15L)))
+}
+```
+
+#### Bin Packing Partitioner
+```scala
 case class BinPackingRepartitioner(ebookUrls) {
   repartition(partitions: Int): RDD = {
     val packingItems = ebookUrls.map { case (bookshelf, ebooks) => (bookshelf, ebooks.totalTextSize) }.collect().toMap
@@ -159,4 +178,81 @@ class BinPackingPartitioner(packedUrls: BinsContainer) extends Partitioner {
 }
 ```
 # Term Frequency-Inverse Document Frequency
-![Screenshot](images/tf_idf.png) 
+![Screenshot](images/tf_idf.png)  
+  
+[TF-IDF](https://www.onely.com/blog/what-is-tf-idf/) is an information retrieval technique that weighs a term’s 
+frequency (TF) and its inverse document frequency (IDF). Each word or term has its respective TF and IDF score. 
+The product of the TF and IDF scores of a term is called the TF*IDF weight of that term.   
+For a word to have high tf-idf in a document, it must appear a lot of times in said document and must be absent
+in the other documents. It must be a signature word of the document.  
+  
+Code example
+```scala
+case class TfIdf[DocId](corpus: Map[DocId, String]) {  
+  def calculate() = {
+    val (tfs, idf) = calcTfAndIdf
+    tfs.mapValues(tf => {
+      tf.map { case (term, freqOfTermInDoc) => (term, freqOfTermInDoc * idf.get(term))) }
+    })
+  }
+
+  def calcTfAndIdf = {
+    val idAndTerms = corpus.mapValues(getTerms)
+    val tfs = idAndTerms.map {case (id, terms) => (id, tf(terms))}
+
+    val docsCount = corpus.size
+    val termDocCounts = idAndTerms
+      .flatMap { case (_, terms) => terms.distinct }
+      .groupBy(identity) //group by words and count frequencies
+      .mapValues(_.size)
+
+    (tfs, idf(docsCount, termDocCounts))
+  }
+
+  def idf(nDocs: Long, termDocCounts: Map[String, Int]) = {
+    termDocCounts.mapValues(termCount => Math.log(nDocs / (1.0 + termCount)))
+  }
+
+  def tf(terms: Stream[String]) = {
+    val nTerms = terms.length
+    val frequencies = terms.groupBy(identity).mapValues(_.length)
+    frequencies.mapValues(calcTf(nTerms))
+  }
+}
+```
+
+Given set of documents
+```scala
+val docs = Map(
+    "doc 1" -> "word1 word1 word2 word3 word4",
+    "doc 2" -> "word1 word2 word3 word4 word5",
+    "doc 3" -> "word1 word1 word1 word1 word2",
+  )
+```
+
+1. Calculate terms frequencies
+```scala
+it should "calculate terms frequencies per document" in {
+  val docTfs = TfIdf.tf(docs)
+
+  //doc 1 -> (word1, 0.4), (word2, 0.2), (word4, 0.2), (word3, 0.2)
+  //doc 2 -> (word2, 0.2), (word5, 0.2), (word3, 0.2), (word1, 0.2), (word4,0.2)
+  //doc 3 -> (word1, 0.8), (word2, 0.2)
+
+  assert(docTfs("doc 1").getTermWeight("word1").equals(0.4))
+  assert(docTfs("doc 2").getTermWeight("word1").equals(0.2))
+  assert(docTfs("doc 3").getTermWeight("word1").equals(0.8))
+}
+```
+
+2. Calculate inverse document frequency  
+```scala
+it should "calculate IDF of a word where idf is the measure of how significant that term is in the whole corpus." in {
+  val idfIndex = TfIdf.idf(docs)
+  //`word 5` must be the most significant one as it is present only in `doc 2`
+  val (mostSignificantTerm, weight) = idfIndex.iterator.maxBy{ case (term, weight) =>  weight}
+  assert(mostSignificantTerm == "word5")
+}
+```
+
+3. Calculate tf-idf for Ebooks
