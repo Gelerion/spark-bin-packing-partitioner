@@ -1,23 +1,28 @@
 package com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg
 
-import com.gelerion.spark.bin.packing.partitioner.domain.model.Bookshelf
-import com.gelerion.spark.bin.packing.partitioner.service.BinPacking
-import com.gelerion.spark.bin.packing.partitioner.utils.Args
 import org.scalatest.FlatSpec
 
 class GutenbergLibraryTest extends FlatSpec {
   behavior of "GutenbergLibrary"
 
   private val gutenbergLibrary = new GutenbergLibrary()
+  import gutenbergLibrary.implicits._
 
-  it should "load bookshelves" in {
+  it should "load bookshelves and propagate limits" in {
+    val limitBookshelves = 2
+    val limitEbooks = 3
+
     val bookshelves = gutenbergLibrary.getBookshelvesWithEbooks
-    val limited = withLimitsPushDown(bookshelves)(reqBookshelves = 3, reqEbook = 5)
-    limited.foreach(println)
-  }
+      .limitEBooksPerShelf(limitEbooks)
+      .limitBookshelves(limitBookshelves)
 
-  private def withLimitsPushDown(bookshelves: Seq[Bookshelf])(reqBookshelves: Int, reqEbook: Int): Seq[Bookshelf] = {
-      bookshelves.take(reqBookshelves).map(bookshelf => bookshelf.copy(ebooks = bookshelf.ebooks.take(reqEbook)))
-  }
+    assert(bookshelves.size == limitBookshelves)
+    assert(bookshelves.flatMap(_.ebooks).size <= (limitEbooks * limitBookshelves)) //up to 3 ebooks per shelf
 
+//    bookshelves.foreach(bookshelf => {
+//      println(bookshelf.url)
+//      println(s"ebooks count ${bookshelf.ebooks.size}")
+//      bookshelf.ebooks.foreach(ebook => s" -> ${println(ebook)}")
+//    })
+  }
 }

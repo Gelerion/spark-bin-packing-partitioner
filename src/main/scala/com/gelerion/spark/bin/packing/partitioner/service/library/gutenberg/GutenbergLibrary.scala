@@ -1,17 +1,12 @@
 package com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg
 
-import com.gelerion.spark.bin.packing.partitioner.domain._
-import com.gelerion.spark.bin.packing.partitioner.domain.model.serde.BookshelfSerDe
-import com.gelerion.spark.bin.packing.partitioner.domain.model.{Bookshelf, EBooksUrls, Ebook, EbookText, EbookUrl}
+import com.gelerion.spark.bin.packing.partitioner.domain.model._
+import com.gelerion.spark.bin.packing.partitioner.service.WebClient
 import com.gelerion.spark.bin.packing.partitioner.service.html.parser.HtmlParser
 import com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg.GutenbergLibrary.{textEndMarkers, textStartMarkers}
-import com.gelerion.spark.bin.packing.partitioner.service.WebClient
 import com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg.modifiers.{BookshelvesPersistentWriter, ThroughFileReader}
 import com.gelerion.spark.bin.packing.partitioner.utils.Trie
 import org.apache.logging.log4j.scala.Logging
-
-import scala.io.{BufferedSource, Codec}
-import scala.reflect.io.File
 
 //http://www.gutenberg.lib.md.us
 //Project Gutenberg offers over 59,000 free eBooks. Choose among free epub and Kindle eBooks, download them or
@@ -120,69 +115,31 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
       } yield href
     }
   }
-}
 
-object Test {
-  def main(args: Array[String]): Unit = {
-    val gutenbergLibrary = new GutenbergLibrary() with ThroughFileReader with BookshelvesPersistentWriter
+  object implicits {
+    /**
+     * If {{{BookshelvesPersistentWriter}}} is present, it wouldn't be possible to pushdown limits;
+     * Limits will be applied only afterward.
+     *
+     * Otherwise only a requested amount of data should be fetched
+     */
+    implicit class LimitPushDownSpec(bookshelves: Seq[Bookshelf]) {
 
-    val bookshelves = gutenbergLibrary.getBookshelvesWithEbooks
-    val limited = withLimitsPushDown(bookshelves)(reqBookshelves = 3, reqEbook = 5)
-    limited.foreach(bookshelf => {
-      println(bookshelf.url)
-      bookshelf.ebooks.foreach(ebook => s" -> ${println(ebook)}")
-    })
-//    new GutenbergLibrary().getAllBookshelfUrls().foreach(println)
-//    new GutenbergLibrary().getEbookIdsAndTitles("https://www.gutenberg.org/wiki/Zoology_(Bookshelf)").foreach(println)
-//    new GutenbergLibrary().getBookshelvesWithEbooks().foreach(println)
+      def limitBookshelves(requested: Int): Seq[Bookshelf] = {
+        bookshelves.take(requested)
+      }
 
-    //create bookshelves
-//    val library = new GutenbergLibrary()
-//    val bookshelves = library.getBookshelvesWithEbooks()
-//    File("bookshelves").writeAll(BookshelfSerDe.encode(bookshelves))
-//    val requested = 1
-//    val source: BufferedSource = File("bookshelves").chars(Codec.UTF8)
-//    val bookshelves = source.getLines().take(requested).flatMap(BookshelfSerDe.decode).flatten
+      def limitEBooksPerShelf(requested: Int): Seq[Bookshelf] = {
+        bookshelves.map(bookshelf => bookshelf.copy(ebooks = bookshelf.ebooks.take(requested)))
+      }
 
-
-//    for (bookshelf <- bookshelves;
-//         urls: EbookUrl <- library.getEbookUrls(bookshelf)) {
-//
-//    }
-
-//    val urls = bookshelves.map(library.resolveEbookUrls)
-//    urls.foreach(url => println(url))
-//    source.close()
-
-//    val bookshelves = Seq(
-//      Bookshelf("url1", Seq(Ebook(1, "title1"), Ebook(2, "title2"))),
-//      Bookshelf("url2", Seq(Ebook(3, "title3"), Ebook(4, "title4")))
-//    )
-//
-//    val encoded = BookshelfSerDe.encode(bookshelves)
-//    println(encoded)
-//
-//    println(BookshelfSerDe.decode(encoded))
-//    val a = bookshelves.map(b => s"${b.url}***${b.ebooks.map(e => s"${e.id}^^${e.title}").mkString(" ")}").mkString("\n")
-//    println(a)
-
-//    Files.write(Paths.get())
-//    val strings: Seq[String] = bookshelves.map(_.toString)
-
-
-//    library.getBookshelvesWithEbooks().take(2).foreach(shelf => {
-//      library.getEbookUrls(shelf).foreach(println)
-//    })
+    }
   }
-
-  private def withLimitsPushDown(bookshelves: Seq[Bookshelf])(reqBookshelves: Int, reqEbook: Int): Seq[Bookshelf] = {
-    bookshelves.take(reqBookshelves).map(bookshelf => bookshelf.copy(ebooks = bookshelf.ebooks.take(reqEbook)))
-  }
-
 }
 
 object GutenbergLibrary {
-  private val textStartMarkers: Trie[Boolean] = Set(
+
+   private val textStartMarkers: Trie[Boolean] = Set(
     "*END*THE SMALL PRINT",
     "*** START OF THE PROJECT GUTENBERG",
     "*** START OF THIS PROJECT GUTENBERG",
@@ -270,5 +227,66 @@ object GutenbergLibrary {
   ).aggregate(Trie.empty[Boolean])(
     seqop = (trie, key) => trie.insert(key, true),
     combop = (trie, _) => trie)
+
+}
+
+object Test {
+  def main(args: Array[String]): Unit = {
+    val gutenbergLibrary = new GutenbergLibrary() with ThroughFileReader with BookshelvesPersistentWriter
+    import gutenbergLibrary.implicits._
+
+    val bookshelves = gutenbergLibrary.getBookshelvesWithEbooks
+    //val limited = withLimitsPushDown(bookshelves)(reqBookshelves = 3, reqEbook = 5)
+
+    val limited = bookshelves
+      .limitEBooksPerShelf(5)
+      .limitBookshelves(4)
+
+    limited.foreach(bookshelf => {
+      println(bookshelf.url)
+      bookshelf.ebooks.foreach(ebook => s" -> ${println(ebook)}")
+    })
+    //    new GutenbergLibrary().getAllBookshelfUrls().foreach(println)
+    //    new GutenbergLibrary().getEbookIdsAndTitles("https://www.gutenberg.org/wiki/Zoology_(Bookshelf)").foreach(println)
+    //    new GutenbergLibrary().getBookshelvesWithEbooks().foreach(println)
+
+    //create bookshelves
+    //    val library = new GutenbergLibrary()
+    //    val bookshelves = library.getBookshelvesWithEbooks()
+    //    File("bookshelves").writeAll(BookshelfSerDe.encode(bookshelves))
+    //    val requested = 1
+    //    val source: BufferedSource = File("bookshelves").chars(Codec.UTF8)
+    //    val bookshelves = source.getLines().take(requested).flatMap(BookshelfSerDe.decode).flatten
+
+
+    //    for (bookshelf <- bookshelves;
+    //         urls: EbookUrl <- library.getEbookUrls(bookshelf)) {
+    //
+    //    }
+
+    //    val urls = bookshelves.map(library.resolveEbookUrls)
+    //    urls.foreach(url => println(url))
+    //    source.close()
+
+    //    val bookshelves = Seq(
+    //      Bookshelf("url1", Seq(Ebook(1, "title1"), Ebook(2, "title2"))),
+    //      Bookshelf("url2", Seq(Ebook(3, "title3"), Ebook(4, "title4")))
+    //    )
+    //
+    //    val encoded = BookshelfSerDe.encode(bookshelves)
+    //    println(encoded)
+    //
+    //    println(BookshelfSerDe.decode(encoded))
+    //    val a = bookshelves.map(b => s"${b.url}***${b.ebooks.map(e => s"${e.id}^^${e.title}").mkString(" ")}").mkString("\n")
+    //    println(a)
+
+    //    Files.write(Paths.get())
+    //    val strings: Seq[String] = bookshelves.map(_.toString)
+
+
+    //    library.getBookshelvesWithEbooks().take(2).foreach(shelf => {
+    //      library.getEbookUrls(shelf).foreach(println)
+    //    })
+  }
 
 }

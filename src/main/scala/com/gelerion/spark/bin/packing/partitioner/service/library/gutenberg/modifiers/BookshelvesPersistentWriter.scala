@@ -7,6 +7,9 @@ import com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg.Eboo
 import scala.reflect.io.File
 import scala.util.Try
 
+/**
+ * Note, when used doesn't honor laziness and always evaluates eagerly.
+ */
 trait BookshelvesPersistentWriter extends EbooksLibrary {
   private val filename = "bookshelves"
   private lazy val file = File(filename)

@@ -15,6 +15,7 @@ trait EbooksLibraryRepository {
 
 abstract class GutenbergRepository extends EbooksLibraryRepository with Logging {
   val gutenbergLibrary: GutenbergLibrary //depends on
+  import gutenbergLibrary.implicits._
 
   override def getBookshelves: Dataset[Bookshelf] = {
     val spark = SparkHolder.getSpark
@@ -31,13 +32,12 @@ abstract class GutenbergRepository extends EbooksLibraryRepository with Logging 
 
     if (Args.cli.limitBookshelves.isDefined) {
       logger.debug(s"Requested up to ${Args.cli.limitBookshelves()} bookshelves")
-      result = bookshelves.take(Args.cli.limitBookshelves())
+      result = bookshelves.limitBookshelves(Args.cli.limitBookshelves())
     }
 
     if (Args.cli.limitEbooksPerBookshelf.isDefined) {
       logger.debug(s"Requested up to ${Args.cli.limitEbooksPerBookshelf()} e-books per bookshelf")
-      result = result.map(bookshelf =>
-        bookshelf.copy(ebooks = bookshelf.ebooks.take(Args.cli.limitEbooksPerBookshelf())))
+      result = result.limitEBooksPerShelf(Args.cli.limitEbooksPerBookshelf())
     }
 
     result

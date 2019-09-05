@@ -1,6 +1,6 @@
 package com.gelerion.spark.bin.packing.partitioner
 
-import com.gelerion.spark.bin.packing.partitioner.domain.model.{Bookshelf, BookshelfText, BookshelfUrl, EbookTfIdf}
+import com.gelerion.spark.bin.packing.partitioner.domain.model.{Bookshelf, BookshelfUrl, EbookTfIdf}
 import com.gelerion.spark.bin.packing.partitioner.domain.repository.{GutenbergRepository, TfIdfIndexRepository}
 import com.gelerion.spark.bin.packing.partitioner.service.TfIdf
 import com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg.GutenbergLibrary

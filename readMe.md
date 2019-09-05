@@ -14,8 +14,27 @@ Given some search terms:
 2. Find the Gutenberg bookshelf that those terms are most important to.
 
 # Usage
-run index
-search query
+
+### Running Locally
+1. Run index builder 
+```
+IndexBuilder --limit-bookshelves=3 --limit-ebooks-per-bookshelf=5
+```
+If `output-directory` isn't defined it will store the calculated index under your working directory `/tfidfIndex/books` path
+
+2. Run search queries
+```
+ScoreQueryRunner --search-query=how to cook dinner for forty large human people
+```
+Example output:
+```
++--------+------------------------------------+---------------------+
+|ebook_id|ebook_title                         |total_weight         |
++--------+------------------------------------+---------------------+
+|2046    |Clotel; or, the President's Daughter|5.7548979284823865E-5|
+|558     |The Thirty-nine Steps               |3.247770758597392E-5 |
++--------+------------------------------------+---------------------+
+```
 
 ## What is inside?
 1. Distributed Tf Idf Calculation 
@@ -160,7 +179,21 @@ it should "packNBins into 4 equally sized bins" in {
 ```
 
 #### Bin Packing Partitioner
+All we have to know is a text size aka content-length per ebook, so that we would able to distribute the load more evenly
+by mixing small books and big books into an equally sized bins. 
 ```scala
+// compute text sizes
+val ebookUrls = bookshelves.mapPartitions(bookshelves => {   
+   bookshelves.map(bookshelf => (bookshelf.url, getTotalTextSize(bookshelf)))
+})
+
+//relative fast computation as there up to N bookshelves elements
+val packingItems = ebookUrls.collect()
+val packedUrlsIntoBins = BinPacking(packingItems).packNBins(partitions)
+
+//here the magic comes
+ebookUrls.rdd.partitionBy(new BinPackingPartitioner(packedUrlsIntoBins))
+
 case class BinPackingRepartitioner(ebookUrls) {
   repartition(partitions: Int): RDD = {
     val packingItems = ebookUrls.map { case (bookshelf, ebooks) => (bookshelf, ebooks.totalTextSize) }.collect().toMap
@@ -265,3 +298,18 @@ it should "calculate Tf-Idf aka signature words of the documents" in {
   assert(termWeightsIter.next().term == "word5")
 }
 ```
+
+#### Adding Spark into the mix
+After we have loaded and distributed all the text for the ebooks, we are ready to calculate Tf-Idf.  
+That's it.
+```scala
+val booksTfIdf = corpus.map {
+  case (bookshelfUrl, ebookTexts) => (bookshelfUrl, TfIdf.calculate(ebookTexts))
+}
+```
+
+## Trie
+TODO
+
+## Scala Features
+TODO

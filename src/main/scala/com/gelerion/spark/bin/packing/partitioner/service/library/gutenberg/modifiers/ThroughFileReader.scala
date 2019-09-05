@@ -8,7 +8,11 @@ import scala.io.Codec
 import scala.language.reflectiveCalls
 import scala.reflect.io.File
 
-//stackable modifications
+/**
+ * stackable modifications
+ * --
+ * Make subsequent runs faster
+ */
 trait ThroughFileReader extends EbooksLibrary {
   implicit val codec: Codec = Codec.UTF8
 
