@@ -17,9 +17,10 @@ trait ThroughFileReader extends EbooksLibrary {
 
 
   abstract override def getBookshelvesWithEbooks: Seq[Bookshelf] = {
-    Option(file.exists) match {
-      case Some(_) => loadFromFile()
-      case None => super.getBookshelvesWithEbooks //parse web
+    if (file.exists) {
+      loadFromFile()
+    } else {
+      super.getBookshelvesWithEbooks
     }
   }
 

@@ -182,7 +182,8 @@ class BinPackingPartitioner(packedUrls: BinsContainer) extends Partitioner {
   
 [TF-IDF](https://www.onely.com/blog/what-is-tf-idf/) is an information retrieval technique that weighs a term’s 
 frequency (TF) and its inverse document frequency (IDF). Each word or term has its respective TF and IDF score. 
-The product of the TF and IDF scores of a term is called the TF*IDF weight of that term.   
+The product of the TF and IDF scores of a term is called the TF*IDF weight of that term.  
+   
 For a word to have high tf-idf in a document, it must appear a lot of times in said document and must be absent
 in the other documents. It must be a signature word of the document.  
   
@@ -255,4 +256,12 @@ it should "calculate IDF of a word where idf is the measure of how significant t
 }
 ```
 
-3. Calculate tf-idf for Ebooks
+3. Calculate tf-idf for documents
+```scala
+it should "calculate Tf-Idf aka signature words of the documents" in {
+  val tfIdf = TfIdf.calculate(docs)
+  val termWeightsIter = tfIdf.getSignatureWordsFor("doc 2").take(1)
+
+  assert(termWeightsIter.next().term == "word5")
+}
+```

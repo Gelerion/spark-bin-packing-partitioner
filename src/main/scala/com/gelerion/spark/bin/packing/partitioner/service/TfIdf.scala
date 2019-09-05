@@ -6,6 +6,7 @@ import com.gelerion.spark.bin.packing.partitioner.service.TfIdf.getTerms
 import com.gelerion.spark.bin.packing.partitioner.utils.Rational
 import org.apache.logging.log4j.scala.Logging
 
+import scala.collection.immutable.{ListMap, SortedMap}
 import scala.language.implicitConversions
 
 /**
@@ -28,7 +29,7 @@ case class TfIdf[DocId](corpus: Map[DocId, String]) extends Logging {
       .mapValues(termWeights => {
         //sort by term weigh desc, take the most significant only
         val mostSignificantTerms = termWeights.toSeq.sortWith(_._2 > _._2).take(500)
-        TermsWeightsMap(Map(mostSignificantTerms: _*))
+        TermsWeightsMap(ListMap(mostSignificantTerms: _*))
       })
   }
 
@@ -116,7 +117,7 @@ object TfIdf {
 
   def tf(docs: Map[String, String]): Map[String, TermsWeightsMap] = {
     val (tfs, _) = TfIdf(docs).calcTfAndIdf
-    tfs.mapValues(docTf => TermsWeightsMap(docTf.mapValues(_.value)))
+    tfs.mapValues(docTf => TermsWeightsMap(ListMap(docTf.mapValues(_.value).toSeq.sortWith(_._2 > _._2):_ *)))
   }
 
   def idf(docs: Map[String, String]): Map[String, Double] = {
@@ -134,15 +135,13 @@ case class TfIdfIndex(private val tfIdfPerDoc: Map[String, TermsWeightsMap]) {
   type DocId = String
   //private lazy val invertedTermsIndex: Map[Term, DocId] = tfIdfPerDoc
 
-  //create an inverted index and do not sort terms each invocation
-  def getTopNSignatureWordsFor(docId: DocId, topN: Int): Option[List[TermWeight]] = {
-    tfIdfPerDoc.get(docId).map(tfidf => tfidf.terms.toList.sorted.reverse.take(topN))
+  def getSignatureWordsFor(docId: DocId): Iterator[TermWeight] = {
+    tfIdfPerDoc(docId).iterator
   }
-
 }
 
-//term to weight -- extends ListMap
-case class TermsWeightsMap(/*private val*/ dict: Map[String, Double]) extends Iterable[TermWeight]  {
+//term to weight, values are always sorted by weight ascending
+case class TermsWeightsMap(private val dict: ListMap[String, Double]) extends Iterable[TermWeight]  {
   type Term = String
   type Weight = Double
 

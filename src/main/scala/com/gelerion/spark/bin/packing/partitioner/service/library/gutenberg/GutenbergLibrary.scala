@@ -6,6 +6,7 @@ import com.gelerion.spark.bin.packing.partitioner.domain.model.{Bookshelf, EBook
 import com.gelerion.spark.bin.packing.partitioner.service.html.parser.HtmlParser
 import com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg.GutenbergLibrary.{textEndMarkers, textStartMarkers}
 import com.gelerion.spark.bin.packing.partitioner.service.WebClient
+import com.gelerion.spark.bin.packing.partitioner.service.library.gutenberg.modifiers.{BookshelvesPersistentWriter, ThroughFileReader}
 import com.gelerion.spark.bin.packing.partitioner.utils.Trie
 import org.apache.logging.log4j.scala.Logging
 
@@ -37,13 +38,11 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
 
   private val bookshelfHrefRegex = "^/wiki/.+\\(Bookshelf\\)"
 
-  //todo lazy loading stream
   override def getBookshelvesWithEbooks: Seq[Bookshelf] = {
     logger.info("*** GETTING BOOK IDS")
     //get-bookshelf-ids-and-titles!
     getAllBookshelfUrls()
-      .map(bookshelfUrl => Bookshelf(bookshelfUrl, getEbookIdsAndTitles(bookshelfUrl).toSeq))
-      .toSeq
+      .map(bookshelfUrl => Bookshelf(bookshelfUrl, getEbookIdsAndTitles(bookshelfUrl).toStream))
   }
 
   override def getEbooksTexts(ebooksUrls: EBooksUrls): Seq[EbookText] = {
@@ -95,15 +94,16 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
     }
   }
 
-  private def getAllBookshelfUrls(): Iterable[String] = {
+  private def getAllBookshelfUrls(): Stream[String] = {
     //get-all-bookshelf-urls!
     getBookShelves(getHrefs(bookshelfUrl1) ++ getHrefs(bookshelfUrl2))
       .map(bookShelfHref => baseUrl + bookShelfHref)
   }
 
-  private def getBookShelves(hrefs: Iterable[String]): Iterable[String] = {
+  private def getBookShelves(hrefs: Iterable[String]): Stream[String] = {
     //get-bookshelves [hrefs]
     hrefs
+      .toStream //make it lazy
       .filterNot(href => href == null)
       .filterNot(href => nonBookshelfHrefs.contains(href))
       .filter(href => href matches bookshelfHrefRegex)
@@ -124,17 +124,25 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
 
 object Test {
   def main(args: Array[String]): Unit = {
+    val gutenbergLibrary = new GutenbergLibrary() with ThroughFileReader with BookshelvesPersistentWriter
+
+    val bookshelves = gutenbergLibrary.getBookshelvesWithEbooks
+    val limited = withLimitsPushDown(bookshelves)(reqBookshelves = 3, reqEbook = 5)
+    limited.foreach(bookshelf => {
+      println(bookshelf.url)
+      bookshelf.ebooks.foreach(ebook => s" -> ${println(ebook)}")
+    })
 //    new GutenbergLibrary().getAllBookshelfUrls().foreach(println)
 //    new GutenbergLibrary().getEbookIdsAndTitles("https://www.gutenberg.org/wiki/Zoology_(Bookshelf)").foreach(println)
 //    new GutenbergLibrary().getBookshelvesWithEbooks().foreach(println)
 
     //create bookshelves
-    val library = new GutenbergLibrary()
+//    val library = new GutenbergLibrary()
 //    val bookshelves = library.getBookshelvesWithEbooks()
 //    File("bookshelves").writeAll(BookshelfSerDe.encode(bookshelves))
-    val requested = 1
-    val source: BufferedSource = File("bookshelves").chars(Codec.UTF8)
-    val bookshelves = source.getLines().take(requested).flatMap(BookshelfSerDe.decode).flatten
+//    val requested = 1
+//    val source: BufferedSource = File("bookshelves").chars(Codec.UTF8)
+//    val bookshelves = source.getLines().take(requested).flatMap(BookshelfSerDe.decode).flatten
 
 
 //    for (bookshelf <- bookshelves;
@@ -142,9 +150,9 @@ object Test {
 //
 //    }
 
-    val urls = bookshelves.map(library.resolveEbookUrls)
-    urls.foreach(url => println(url))
-    source.close()
+//    val urls = bookshelves.map(library.resolveEbookUrls)
+//    urls.foreach(url => println(url))
+//    source.close()
 
 //    val bookshelves = Seq(
 //      Bookshelf("url1", Seq(Ebook(1, "title1"), Ebook(2, "title2"))),
@@ -165,6 +173,10 @@ object Test {
 //    library.getBookshelvesWithEbooks().take(2).foreach(shelf => {
 //      library.getEbookUrls(shelf).foreach(println)
 //    })
+  }
+
+  private def withLimitsPushDown(bookshelves: Seq[Bookshelf])(reqBookshelves: Int, reqEbook: Int): Seq[Bookshelf] = {
+    bookshelves.take(reqBookshelves).map(bookshelf => bookshelf.copy(ebooks = bookshelf.ebooks.take(reqEbook)))
   }
 
 }

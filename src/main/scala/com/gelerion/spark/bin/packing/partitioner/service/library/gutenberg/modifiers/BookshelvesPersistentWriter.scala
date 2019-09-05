@@ -14,9 +14,10 @@ trait BookshelvesPersistentWriter extends EbooksLibrary {
   abstract override def getBookshelvesWithEbooks: Seq[Bookshelf] = {
     val bookshelves = super.getBookshelvesWithEbooks //parse web
 
-    Option(file.exists) match {
-      case Some(_) => bookshelves //do nothing
-      case None => saveToFile(bookshelves)
+    if (file.exists) {
+      bookshelves
+    } else {
+      saveToFile(bookshelves)
     }
   }
 

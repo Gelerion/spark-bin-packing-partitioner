@@ -3,8 +3,6 @@ package com.gelerion.spark.bin.packing.partitioner.service
 import org.scalatest._
 
 class TfIdfTest extends FlatSpec with Matchers {
-  import TfIdf.ebookTextToMap
-
   behavior of "TfIdf"
 
   private val docs = Map(
@@ -34,7 +32,8 @@ class TfIdfTest extends FlatSpec with Matchers {
 
   it should "calculate Tf-Idf aka signature words of the documents" in {
     val tfIdf = TfIdf.calculate(docs)
-    tfIdf.getTopNSignatureWordsFor("doc 2", 1)
-    println(tfIdf)
+    val termWeightsIter = tfIdf.getSignatureWordsFor("doc 2").take(1)
+
+    assert(termWeightsIter.next().term == "word5")
   }
 }
