@@ -5,10 +5,10 @@ import org.rogach.scallop.{ScallopConf, ScallopOption}
 //noinspection TypeAnnotation
 class CLI(arguments: Seq[String]) extends ScallopConf(arguments) {
 
-  val isInLocalMode = opt[Boolean](
-    name = "is-local-mode",
+  val isLocalMode = opt[Boolean](
+    name = "local-mode",
     descr = "Whether Spark be should run locally or not",
-    default = Some(true)
+    default = Some(false)
   )
 
   val partMode = choice(

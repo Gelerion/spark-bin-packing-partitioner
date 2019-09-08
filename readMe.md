@@ -8,6 +8,18 @@ Hopefully in a more readable way.
 
 [Presentation link](https://jsofra.github.io/bin-packing-presentation/)  
 
+## What is inside?
+1. Distributed Tf Idf Calculation 
+2. Distributed Web Crawling and Html Parsing
+3. Bin Packing Partitioner
+4. Trie Implementation
+
+##### `Scala` specific stuff
+1. stackable modifiers
+2. type aliases
+3. rational type
+4. mixin dependency injection
+
 # Searching Gutenberg
 Given some search terms:  
 1. Find the book in each Gutenberg bookshelf that those terms are most important to.
@@ -35,18 +47,6 @@ Example output:
 |558     |The Thirty-nine Steps               |3.247770758597392E-5 |
 +--------+------------------------------------+---------------------+
 ```
-
-## What is inside?
-1. Distributed Tf Idf Calculation 
-2. Distributed Web Crawling and Html Parsing
-3. Bin Packing Partitioner
-4. Trie Implementation
-
-##### `Scala` specific stuff
-1. stackable modifiers
-2. type aliases
-3. rational type
-4. mixin dependency injection
 
 # Data Skew
 ![Screenshot](images/data_skew.png)  
@@ -187,21 +187,12 @@ val ebookUrls = bookshelves.mapPartitions(bookshelves => {
    bookshelves.map(bookshelf => (bookshelf.url, getTotalTextSize(bookshelf)))
 })
 
-//relative fast computation as there up to N bookshelves elements
+//relatively fast computation as there only up to N bookshelves elements
 val packingItems = ebookUrls.collect()
 val packedUrlsIntoBins = BinPacking(packingItems).packNBins(partitions)
 
 //here the magic comes
 ebookUrls.rdd.partitionBy(new BinPackingPartitioner(packedUrlsIntoBins))
-
-case class BinPackingRepartitioner(ebookUrls) {
-  repartition(partitions: Int): RDD = {
-    val packingItems = ebookUrls.map { case (bookshelf, ebooks) => (bookshelf, ebooks.totalTextSize) }.collect().toMap
-    
-    val packedUrlsIntoBins = BinPacking(packingItems).packNBins(partitions)    
-    ebookUrls.rdd.partitionBy(new BinPackingPartitioner(packedUrlsIntoBins))
-  }
-}
 
 class BinPackingPartitioner(packedUrls: BinsContainer) extends Partitioner {
   def getPartition(key: Any): Int = key match {

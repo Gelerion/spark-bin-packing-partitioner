@@ -33,6 +33,7 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
 
   private val bookshelfHrefRegex = "^/wiki/.+\\(Bookshelf\\)"
 
+  //TODO: in parallel
   override def getBookshelvesWithEbooks: Seq[Bookshelf] = {
     logger.info("*** GETTING BOOK IDS")
     //get-bookshelf-ids-and-titles!

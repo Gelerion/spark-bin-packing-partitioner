@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'scala'
+    id 'com.github.johnrengelman.shadow' version '5.1.0'
 }
 
 group 'com.gelerion.spark.bin.packing.partitioner'
@@ -12,22 +13,32 @@ repositories {
 
 dependencies {
     // https://mvnrepository.com/artifact/org.apache.spark/spark-sql
-    compile group: 'org.apache.spark', name: 'spark-sql_2.12', version: '2.4.3'
+    compile group: 'org.apache.spark', name: 'spark-sql_2.11', version: '2.4.3'
     // https://mvnrepository.com/artifact/net.ruippeixotog/scala-scraper
-    compile group: 'net.ruippeixotog', name: 'scala-scraper_2.12', version: '2.1.0'
+    compile group: 'net.ruippeixotog', name: 'scala-scraper_2.11', version: '2.1.0'
 
     // logging
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api-scala_2.12', version: '11.0'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.12.1'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api-scala_2.11', version: '11.0'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.1'
 
     // https://mvnrepository.com/artifact/com.softwaremill.sttp/core
-    compile group: 'com.softwaremill.sttp', name: 'core_2.12', version: '1.6.4'
+    compile group: 'com.softwaremill.sttp', name: 'core_2.11', version: '1.6.4'
 
     // https://mvnrepository.com/artifact/org.rogach/scallop
-    compile group: 'org.rogach', name: 'scallop_2.12', version: '3.3.1'
+    compile group: 'org.rogach', name: 'scallop_2.11', version: '3.3.1'
 
 
     //testCompile group: 'junit', name: 'junit', version: '4.12'
-    testCompile 'org.scalactic:scalactic_2.12:3.0.8'
-    testCompile 'org.scalatest:scalatest_2.12:3.0.8'
+    testCompile 'org.scalactic:scalactic_2.11:3.0.8'
+    testCompile 'org.scalatest:scalatest_2.11:3.0.8'
+}
+
+shadowJar {
+    zip64 true
+
+    dependencies {
+        exclude(dependency {
+            it.moduleGroup == 'org.apache.spark'
+        })
+    }
 }
