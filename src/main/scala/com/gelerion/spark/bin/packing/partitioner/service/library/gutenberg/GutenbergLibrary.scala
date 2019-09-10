@@ -42,7 +42,7 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
 
   override def getEbooksTexts(ebooksUrls: EBooksUrls): Seq[EbookText] = {
     //get-ebook-texts
-    ebooksUrls.booksUrls.map(bookUrl => {
+    ebooksUrls.booksUrls.flatMap(bookUrl => {
       logger.debug(s"Getting text of ${bookUrl.ebook.id} - ${bookUrl.ebook.title}, ${bookUrl.url} ...")
       getEbookText(bookUrl)
     })
@@ -55,14 +55,17 @@ class GutenbergLibrary(htmlParser: HtmlParser = HtmlParser(),
     EBooksUrls(bookshelf.url, ebookUrls, ebookUrls.map(_.length).sum)
   }
 
-  private def getEbookText(ebookUrl: EbookUrl): EbookText  = {
+  private def getEbookText(ebookUrl: EbookUrl): Option[EbookText]  = {
     val text = webClient.readText(ebookUrl)
       .dropWhile(line => !textStartMarkers.startsWith(line))
-      .tail //drop start marker
+      .drop(1) //drop start marker
       .takeWhile(line => !textEndMarkers.startsWith(line))
       .mkString("")
 
-    EbookText(ebookUrl.ebook, text)
+    text match {
+      case "" => None
+      case _  => Some(EbookText(ebookUrl.ebook, text))
+    }
   }
 
   private def getEbookUrls(bookshelf: Bookshelf): Seq[EbookUrl] = {

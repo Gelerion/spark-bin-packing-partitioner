@@ -8,34 +8,6 @@ Hopefully in a more readable way.
 
 [Presentation link](https://jsofra.github.io/bin-packing-presentation/)  
 
-# Searching Gutenberg
-Given some search terms:  
-1. Find the book in each Gutenberg bookshelf that those terms are most important to.
-2. Find the Gutenberg bookshelf that those terms are most important to.
-
-# Usage
-
-### Running Locally
-1. Run index builder 
-```
-IndexBuilder --limit-bookshelves=3 --limit-ebooks-per-bookshelf=5
-```
-If `output-directory` isn't defined it will store the calculated index under your working directory `/tfidfIndex/books` path
-
-2. Run search queries
-```
-ScoreQueryRunner --search-query=how to cook dinner for forty large human people
-```
-Example output:
-```
-+--------+------------------------------------+---------------------+
-|ebook_id|ebook_title                         |total_weight         |
-+--------+------------------------------------+---------------------+
-|2046    |Clotel; or, the President's Daughter|5.7548979284823865E-5|
-|558     |The Thirty-nine Steps               |3.247770758597392E-5 |
-+--------+------------------------------------+---------------------+
-```
-
 ## What is inside?
 1. Distributed Tf Idf Calculation 
 2. Distributed Web Crawling and Html Parsing
@@ -47,6 +19,34 @@ Example output:
 2. type aliases
 3. rational type
 4. mixin dependency injection
+
+## Searching Gutenberg
+Given some search terms:  
+1. Find the book in each Gutenberg bookshelf that those terms are most important to.
+2. Find the Gutenberg bookshelf that those terms are most important to.
+
+# Usage
+
+### Running Locally
+1. Run index builder 
+```
+IndexBuilder --local-mode --limit-bookshelves=3 --limit-ebooks-per-bookshelf=5
+```
+If `index-directory` isn't defined it will store the calculated index under your working directory `/tfidfIndex/books` path
+
+2. Run search queries
+```
+ScoreQueryRunner --local-mode --search-query=how to cook dinner for forty large human people
+```
+Example output:
+```
++--------+------------------------------------+---------------------+
+|ebook_id|ebook_title                         |total_weight         |
++--------+------------------------------------+---------------------+
+|2046    |Clotel; or, the President's Daughter|5.7548979284823865E-5|
+|558     |The Thirty-nine Steps               |3.247770758597392E-5 |
++--------+------------------------------------+---------------------+
+```
 
 # Data Skew
 ![Screenshot](images/data_skew.png)  

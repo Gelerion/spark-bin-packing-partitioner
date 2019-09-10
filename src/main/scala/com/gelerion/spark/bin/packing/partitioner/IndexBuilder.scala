@@ -25,9 +25,9 @@ object IndexBuilder extends Logging {
   val indexRepository = new TfIdfIndexRepository
 
   // in local mode:
-  // --limit-bookshelves=3 --limit-ebooks-per-bookshelf=5
+  // --local-mode --limit-bookshelves=3 --limit-ebooks-per-bookshelf=5
   // in distributed mode
-  // --is-local-mode=false --part-mode=[skew,pack,partition] --output-directory=[s3/hdfs]directory
+  // -part-mode=[skew,pack,partition] --index-directory=[s3/hdfs]directory
   def main(args: Array[String]): Unit = {
     Args.set(new CLI(args))
     import spark.implicits._

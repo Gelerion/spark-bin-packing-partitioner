@@ -7,7 +7,7 @@ object SparkHolder {
   private var spark: SparkSession = _
 
   private def configure(cli: CLI): Unit = {
-    if (cli.isInLocalMode()) {
+    if (cli.isLocalMode()) {
       spark = SparkSession
         .builder()
         .appName("bin-packing")
