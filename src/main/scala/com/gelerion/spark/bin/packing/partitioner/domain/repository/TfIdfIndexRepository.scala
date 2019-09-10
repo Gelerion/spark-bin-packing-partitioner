@@ -10,7 +10,7 @@ class TfIdfIndexRepository(val converter: RddToDatasetConverter = new RddToDatas
 
   private lazy val spark = SparkHolder.getSpark
 
-  private lazy val storageDirectory = Args.cli.outputDirectory()
+  private lazy val storageDirectory = Args.cli.indexDirectory()
   private lazy val booksIndexPath = s"${storageDirectory}/books"
   private lazy val bookshelvesIndexPath = s"${storageDirectory}/bookshelves"
 

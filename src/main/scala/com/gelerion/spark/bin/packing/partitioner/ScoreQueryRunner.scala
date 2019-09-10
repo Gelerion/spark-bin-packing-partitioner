@@ -14,8 +14,7 @@ object ScoreQueryRunner extends Logging{
   val indexRepository = new TfIdfIndexRepository
 
   // in distributed mode
-  // --is-local-mode=false --output-directory=[s3/hdfs]directory
-  // --search-query=how to cook dinner for forty large human people
+  // --index-directory=[s3/hdfs]directory --search-query=how to cook dinner for forty large human people
   def main(args: Array[String]): Unit = {
     Args.set(new CLI(args))
     import spark.implicits._

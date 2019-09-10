@@ -29,8 +29,8 @@ class CLI(arguments: Seq[String]) extends ScallopConf(arguments) {
     default = None
   )
 
-  val outputDirectory = opt[String](
-    name = "output-directory",
+  val indexDirectory = opt[String](
+    name = "index-directory",
     descr = "Where to store our new shiny index?",
     default = Some("tfidfIndex")
   )

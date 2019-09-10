@@ -20,7 +20,7 @@ Hopefully in a more readable way.
 3. rational type
 4. mixin dependency injection
 
-# Searching Gutenberg
+## Searching Gutenberg
 Given some search terms:  
 1. Find the book in each Gutenberg bookshelf that those terms are most important to.
 2. Find the Gutenberg bookshelf that those terms are most important to.
@@ -30,13 +30,13 @@ Given some search terms:
 ### Running Locally
 1. Run index builder 
 ```
-IndexBuilder --limit-bookshelves=3 --limit-ebooks-per-bookshelf=5
+IndexBuilder --local-mode --limit-bookshelves=3 --limit-ebooks-per-bookshelf=5
 ```
-If `output-directory` isn't defined it will store the calculated index under your working directory `/tfidfIndex/books` path
+If `index-directory` isn't defined it will store the calculated index under your working directory `/tfidfIndex/books` path
 
 2. Run search queries
 ```
-ScoreQueryRunner --search-query=how to cook dinner for forty large human people
+ScoreQueryRunner --local-mode --search-query=how to cook dinner for forty large human people
 ```
 Example output:
 ```
@@ -187,12 +187,21 @@ val ebookUrls = bookshelves.mapPartitions(bookshelves => {
    bookshelves.map(bookshelf => (bookshelf.url, getTotalTextSize(bookshelf)))
 })
 
-//relatively fast computation as there only up to N bookshelves elements
+//relative fast computation as there up to N bookshelves elements
 val packingItems = ebookUrls.collect()
 val packedUrlsIntoBins = BinPacking(packingItems).packNBins(partitions)
 
 //here the magic comes
 ebookUrls.rdd.partitionBy(new BinPackingPartitioner(packedUrlsIntoBins))
+
+case class BinPackingRepartitioner(ebookUrls) {
+  repartition(partitions: Int): RDD = {
+    val packingItems = ebookUrls.map { case (bookshelf, ebooks) => (bookshelf, ebooks.totalTextSize) }.collect().toMap
+    
+    val packedUrlsIntoBins = BinPacking(packingItems).packNBins(partitions)    
+    ebookUrls.rdd.partitionBy(new BinPackingPartitioner(packedUrlsIntoBins))
+  }
+}
 
 class BinPackingPartitioner(packedUrls: BinsContainer) extends Partitioner {
   def getPartition(key: Any): Int = key match {

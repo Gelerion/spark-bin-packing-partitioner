@@ -3,7 +3,7 @@ package com.gelerion.spark.bin.packing.partitioner.service
 import com.gelerion.spark.bin.packing.partitioner.domain.model.{Ebook, EbookUrl}
 import com.gelerion.spark.bin.packing.partitioner.service.http.client.HttpClient
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 case class WebClient(httpClient: HttpClient = new HttpClient) {
   private val root = "http://www.gutenberg.lib.md.us"
@@ -41,7 +41,8 @@ case class WebClient(httpClient: HttpClient = new HttpClient) {
   }
 
   def readText(ebookUrl: EbookUrl): Stream[String] = {
-    httpClient.get(ebookUrl.url).split(System.lineSeparator()).toStream
+    Try(httpClient.get(ebookUrl.url)).map(_.split(System.lineSeparator()).toStream)
+      .getOrElse(Stream.empty)
   }
 }
 
