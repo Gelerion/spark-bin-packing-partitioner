@@ -112,7 +112,9 @@ object TfIdf {
   def calculate(docs: Map[String, String]): TfIdfIndex = TfIdfIndex(TfIdf(docs).calculate())
 
   def getTerms(text: String): Stream[String] = {
-    splitWord(text).filterNot(stopWord)
+    //improvement: build lemmas
+    //separate class
+    splitWord(text).filterNot(stopWord).map(cleanPunctuation).filter(notEmptyOrSmallWord)
   }
 
   def tf(docs: Map[String, String]): Map[String, TermsWeightsMap] = {
@@ -127,6 +129,14 @@ object TfIdf {
 
   private def splitWord(text: String): Stream[String] = {
     text.toLowerCase.split("\\W+").toStream
+  }
+
+  private def cleanPunctuation(word: String): String = {
+    word.trim.replaceAll("(\\p{Punct})", "")
+  }
+
+  private def notEmptyOrSmallWord(word: String): Boolean = {
+    word.nonEmpty && word.length > 1
   }
 }
 
