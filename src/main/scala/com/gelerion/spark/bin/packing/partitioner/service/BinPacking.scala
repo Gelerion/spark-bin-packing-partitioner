@@ -15,7 +15,7 @@ import scala.language.implicitConversions
  *  - First Fit Decreasing (FFD)
  *  - Worst Fit Decreasing (WFD)
  */
-case class BinPacking[ItemType](private val packingItems: Map[ItemType, Long]) extends Logging {
+class BinPacking[ItemType](private val packingItems: Map[ItemType, Long]) extends Logging {
   implicit def tupleToItem(tuple: (ItemType, Long)): Item = Item(tuple._1, tuple._2)
 
   //example

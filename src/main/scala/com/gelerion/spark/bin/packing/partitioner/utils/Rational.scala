@@ -2,7 +2,7 @@ package com.gelerion.spark.bin.packing.partitioner.utils
 
 import scala.annotation.tailrec
 
-case class Rational(n: Int, d: Int) {
+class Rational(n: Int, d: Int) {
   //Scala compiler will compile any code you place in the class body, which isn't part of a field or a method definition, into the primary constructor.
   //----------------------------------------------
   require(d != 0) //preconditions

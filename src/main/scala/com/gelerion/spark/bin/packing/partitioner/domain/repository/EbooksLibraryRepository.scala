@@ -24,7 +24,10 @@ abstract class GutenbergRepository extends EbooksLibraryRepository with Logging 
     logger.info("*** GETTING URLS")
     val bookshelves: Seq[Bookshelf]= withLimitsPushDown(gutenbergLibrary.getBookshelvesWithEbooks)
 
-    spark.createDataset(bookshelves)
+    logger.info(s"Total bookshelves count is ${bookshelves.size}")
+    //enforce custom parallelism
+    spark.createDataset(spark.sparkContext.parallelize(bookshelves, 34))
+    //spark.createDataset(bookshelves)
   }
 
   private def withLimitsPushDown(bookshelves: Seq[Bookshelf]): Seq[Bookshelf] = {

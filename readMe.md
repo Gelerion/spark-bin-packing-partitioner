@@ -13,6 +13,7 @@ Hopefully in a more readable way.
 2. Distributed Web Crawling and Html Parsing
 3. Bin Packing Partitioner
 4. Trie Implementation
+5. Top within each category
 
 ##### `Scala` specific stuff
 1. stackable modifiers

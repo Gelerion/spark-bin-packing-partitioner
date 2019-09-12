@@ -39,7 +39,7 @@ object IndexBuilder extends Logging {
     val ebookUrls = bookshelves.mapPartitions(bookshelves => {
       val gutenbergLibrary = new GutenbergLibrary()
       bookshelves.map(bookshelf => (BookshelfUrl(bookshelf.url), gutenbergLibrary.resolveEbookUrls(bookshelf)))
-    }).cache()
+    })
 
     // 3. Repartition skewed dataset
     val partitionedEbookUrls = Args.cli.partMode() match {
@@ -56,7 +56,7 @@ object IndexBuilder extends Logging {
       iter.map {
         case (bookshelfUrl, ebookUrl) => (bookshelfUrl, gutenbergLibrary.getEbooksTexts(ebookUrl))
       }
-    }).cache()
+    })//.cache() //if proc mode = full
 
     // 5. Calculate tf idf weights per book, heavy operation
     logger.info("*** RUNNING TF-IDF ON TEXTS")

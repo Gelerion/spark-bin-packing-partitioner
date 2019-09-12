@@ -8,7 +8,7 @@ class TfIdfTest extends FlatSpec with Matchers {
   private val docs = Map(
     "doc 1" -> "word1 word1 word2 word3 word4",
     "doc 2" -> "word1 word2 word3 word4 word5",
-    "doc 3" -> "word1 word1 word1 word1 word2",
+    "doc 3" -> "word1 word1 word1 word1 word2"
   )
 
   it should "calculate terms frequencies per document" in {
@@ -35,5 +35,12 @@ class TfIdfTest extends FlatSpec with Matchers {
     val termWeightsIter = tfIdf.getSignatureWordsFor("doc 2").take(1)
 
     assert(termWeightsIter.next().term == "word5")
+  }
+
+  it should "filter punctuation, small and stop words" in {
+    val terms = TfIdf.getTerms("_net_9_ is here _ ,, 1").force.toList
+    assert(terms.size == 2)
+    assert(terms.contains("net9"))
+    assert(terms.contains("here"))
   }
 }
