@@ -27,69 +27,54 @@ object ScoreQueryRunner extends Logging{
     val query: String = Args.cli.searchQuery()
     logger.info(s"Search query $query")
 
-//      .select($"bookshelf_url", $"ebook_id", $"ebook_title", sum($"weight").over(bookshelf).as("weights"))
-//      .orderBy($"bookshelf_url", $"weights".desc)
-//      .limit(20)
-//      .show(false)
-
+    //1. Calculate similarity level per book within each bookshelf
+    //2. Order bookshelves by the total similarity level, so that bookshelf with the most relevant books will be on top
+    //3. Within each bookshelf show top 3 most similar books
 
     //score-query
     //there is no global tf-idf index, it's calculated per bookshelf
-    val globallyCalculated = ebooksTfIdfIndex
+    val similarBooks = ebooksTfIdfIndex
       .where($"term".isin(TfIdf.getTerms(query): _ *))
       .groupBy($"bookshelf_url", $"ebook_id", $"ebook_title")
-      .agg(sum($"weight").as("total_weight"))
-      .filter($"total_weight" > 0.001) //filter non relevant books
-//      .orderBy($"total_weight".desc)
-//      .limit(20)
-//      .show(false)
+      .agg(sum($"weight").as("similarity_level"))
+      .filter($"similarity_level" > 0.001) //filter low relevant books, dynamic value?
 
-    val bookshelf = Window.partitionBy($"bookshelf_url").orderBy($"total_weight".desc)
-    val bookshelfGlob = Window.partitionBy($"bookshelf_url")
+    val orderedBySimilarityLevelWindow = Window.partitionBy($"bookshelf_url").orderBy($"similarity_level".desc)
+    val bookshelvesWindow = Window.partitionBy($"bookshelf_url")
+    val urlPrefixLength = "https://www.gutenberg.org/wiki/".length + 1
 
-    //1. Calculate the weight within each bookshelf that is most related to the query
-    //2. Order the books withing each bookshelf by the relatness (based on weigh)
-    //3. Determine bookshelf with the most related to the query books
-    //4. Sort by bookshelf weight so that bookshelf with the most realted books will be the first one etc
-    //   and within each category show top 3 books
-
-
-    globallyCalculated
-      .select($"bookshelf_url", $"ebook_id", substring($"ebook_title", 0, 60), $"total_weight",
-        rank().over(bookshelf).as("topN"),
-        sum($"total_weight").over(bookshelfGlob).as("sum")
+//  Bookshelf similarity is calculated based on the sum of the topN similar books
+    similarBooks
+      .select(
+        $"bookshelf_url",
+        $"ebook_id",
+        substring($"ebook_title", 0, 60).as("title"), //cut long titles
+        $"similarity_level",
+        rank().over(orderedBySimilarityLevelWindow).as("topN") //order and rank the books by similarity level
       )
-      .filter($"topN" <= 3)
-      .orderBy($"sum".desc, $"bookshelf_url", $"topN")
-      .show(50, false)
+      .filter($"topN" <= 2)
+      .select($"bookshelf_url", $"ebook_id", $"title", $"similarity_level",
+        sum($"similarity_level").over(bookshelvesWindow).as("bookshelfSimilarityLevel"))
+      .orderBy($"bookshelfSimilarityLevel".desc, $"bookshelf_url", $"topN")
+      .select(
+        $"bookshelf_url".substr(urlPrefixLength, urlPrefixLength + 100).as("bookshelf"),
+        $"title",
+        $"similarity_level")
+      .show(10, false)
 
-
-//    ebooksTfIdfIndex
-//      .where($"bookshelf_url" === "https://www.gutenberg.org/wiki/Cookbooks_and_Cooking_(Bookshelf)")
-//      .where($"term".isin(TfIdf.getTerms(query): _ *))
-//      .groupBy($"bookshelf_url", $"ebook_id", $"ebook_title")
-//      .agg(sum($"weight").as("total_weight"))
-//      .orderBy($"total_weight".desc)
-//      .limit(20)
-//      .show(false)
-
-//    ebooksTfIdfIndex
-////      .where($"bookshelf_url".startsWith("https://www.gutenberg.org/wiki/Cookery"))
-//      .where($"bookshelf_url" === "https://www.gutenberg.org/wiki/Cookbooks_and_Cooking_(Bookshelf)")
-////      .where($"term" === "how")
-//      .where($"term".isin(TfIdf.getTerms(query):_ *))
-//      .orderBy($"weight".desc)
-//      .limit(100)
-//      .show(100, false)
-
-//    ebooksTfIdfIndex.where($"ebook_id" === 22829)
-//      .orderBy($"weight".desc)
-//      .limit(100)
-//      .show(100, false)
-
-//    calc.join(ebooksTfIdfIndex, Seq("ebook_id"))
-//      .select()
-
+//    Bookshelf similarity is calculated based on the sum of similarities of each book
+//    similarBooks
+//      .select(
+//        $"bookshelf_url",
+//        $"ebook_id",
+//        substring($"ebook_title", 0, 60).as("title"), //cut long titles
+//        $"similarity_level",
+//        rank().over(orderedBySimilarityLevelWindow).as("topN"), //order and rank the books by similarity level
+//        sum($"similarity_level").over(bookshelvesWindow).as("bookshelfSimilarityLevel") //get bookshelves with the most similar books
+//      )
+//      .filter($"topN" <= 3)
+//      .orderBy($"bookshelfSimilarityLevel".desc, $"bookshelf_url", $"topN")
+//      .select($"bookshelf_url".as("bookshelf"), $"title", $"similarity_level")
+//      .show(10, false)
   }
-
 }
