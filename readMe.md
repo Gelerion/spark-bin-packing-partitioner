@@ -13,7 +13,7 @@ Hopefully in a more readable way.
 2. Distributed Web Crawling and Html Parsing
 3. Bin Packing Partitioner
 4. Trie Implementation
-5. Top within each category
+5. Top within each category ordering
 
 ##### `Scala` specific stuff
 1. stackable modifiers
@@ -41,13 +41,23 @@ ScoreQueryRunner --local-mode --search-query=how to cook dinner for forty large 
 ```
 Example output:
 ```
-+--------+------------------------------------+---------------------+
-|ebook_id|ebook_title                         |total_weight         |
-+--------+------------------------------------+---------------------+
-|2046    |Clotel; or, the President's Daughter|5.7548979284823865E-5|
-|558     |The Thirty-nine Steps               |3.247770758597392E-5 |
-+--------+------------------------------------+---------------------+
++--------------------------------------+------------------------------------------------------------+---------------------+
+|bookshelf                             |title                                                       |similarity_level     |
++--------------------------------------+------------------------------------------------------------+---------------------+
+|Children's_Picture_Books_(Bookshelf)  |The Kitten's Garden of Verses                               |0.02580279962925926  |
+|Children's_Picture_Books_(Bookshelf)  |Wee Ones' Bible Stories                                     |0.010348733748023626 |
+|Animal_(Bookshelf)                    |A Guide for the Study of Animals                            |0.011752931974210944 |
+|Animal_(Bookshelf)                    |History of Beasts                                           |0.009199061656556122 |
+|Esperanto_(Bookshelf)                 |Esperanto: Hearings before the Committee on Education       |0.010759704224797054 |
+|Esperanto_(Bookshelf)                 |A Blind Esperantist's Trip to Finland and Sweden, to Attend |0.009663342432013127 |
+|Science_Fiction_(Bookshelf)           |Gourmet                                                     |0.012141218396802425 |
+|Science_Fiction_(Bookshelf)           |The Mathematicians                                          |0.0053702401665398115|
+|Technology_(Bookshelf)                |How to Prepare and Serve a Meal and Interior Decoration     |0.009392894975053478 |
+|Technology_(Bookshelf)                |A plain cookery book for the working classes                |0.005125602053591905 |
++--------------------------------------+------------------------------------------------------------+---------------------+
 ```
+We could see that `Children's_Picture_Books_(Bookshelf)` has the highest similarity level with these two books on top.
+`similarity_level` is ordered per bookshelf separately as it is meaningless to compare them across bookshelves.
 
 # Data Skew
 ![Screenshot](images/data_skew.png)  
@@ -313,4 +323,10 @@ val booksTfIdf = corpus.map {
 TODO
 
 ## Scala Features
+TODO
+
+## Window functions
+TODO
+
+## Dataset partitioner
 TODO
