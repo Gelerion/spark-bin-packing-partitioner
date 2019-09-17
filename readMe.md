@@ -13,7 +13,7 @@ Hopefully in a more readable way.
 2. Distributed Web Crawling and Html Parsing
 3. Bin Packing Partitioner
 4. Trie Implementation
-5. Top within each category ordering
+5. Window functions
 
 ##### `Scala` specific stuff
 1. stackable modifiers
@@ -320,13 +320,127 @@ val booksTfIdf = corpus.map {
 ```
 
 ## Trie
-TODO
+![Screenshot](images/prefix_trie.png)  
+Tries are an extremely special and useful data-structure that are based on the prefix of a string.   
+They are used to represent the “Retrieval” of data and thus the name Trie.
+  
+A Trie is a special data structure used to store strings that can be visualized like a graph. 
+It consists of nodes and edges. Each node consists of at max 26 children and edges connect each parent 
+node to its children. These 26 pointers are nothing but pointers for each of the 26 letters of the 
+English alphabet A separate edge is maintained for every edge.  
 
+Strings are stored in a top to bottom manner on the basis of their prefix in a trie. All prefixes of 
+length 1 are stored at until level 1, all prefixes of length 2 are sorted at until level 2 and so on.  
+
+Implementing immutable [Trie](https://medium.com/@AlirezaMeskin/implementing-immutable-trie-in-scala-c0ab58fd401) in Scala
+```scala
+case class Trie[V](value: Option[V], children: List[Option[Trie[V]]]) {
+  def insert(key: String, value: V): Trie[V] = Trie.insert(this, key, value, 0)
+  def search(key: String): Option[V] = Trie.search(this, key, 0)
+}
+
+object Trie {
+  //Each node consists of at max 26 children
+  def empty[V]: Trie[V] = new Trie[V](None, List.fill(26)(None))
+
+  private def search[V](node: Trie[V], key: String, step: Int): Option[V] =
+    if (key.length == step) {
+      node.value
+    } else {
+      node.children(key.charAt(step) - 32) match {
+        case Some(nextItem) => search(nextItem, key, step + 1)
+        case None           => None
+      }
+    }
+
+  private def insert[V](node: Trie[V], key: String, value: V, step: Int): Trie[V] =
+    if (key.length == step) {
+      node.copy(value = Some(value))
+    } else {
+      val index    = key.charAt(step) - 97
+      val nextItem = node.children(index).getOrElse(Trie.empty[V])
+      val newNode  = insert(nextItem, key, value, step + 1)
+      val newNext  = node.children.updated(index, Some(newNode))
+      node.copy(children = newNext)
+    }
+}
+```
 ## Scala Features
-TODO
+Mixin dependency injection and Stackable modifiers
+```scala
+object gutenbergRepository extends GutenbergRepository {
+  val gutenbergLibrary = new GutenbergLibrary with ThroughFileReader
+}
+```
+
+#### Stackable Modifiers
+The `ThroughFileReader` trait has two funny things going on.   
+  
+The first is that it declares a superclass, EbooksLibrary. This declaration means that the trait can 
+only be mixed into a class that also extends EbooksLibrary. 
+   
+The second funny thing is that the trait has a super call on a method declared abstract. Such calls are illegal
+for normal classes because they will certainly fail at run time. For a trait, however, such a call can actually
+succeed. Since super calls in a trait are dynamically bound, the super call in trait ThroughFileReader will 
+work so long as the trait is mixed in after another trait or class that gives a concrete definition to the method.
+```scala
+trait ThroughFileReader extends EbooksLibrary {
+  abstract override def getBookshelvesWithEbooks: Seq[Bookshelf] = {
+    ...
+  }
+}
+```
+#### Build in Dependency injection
+With Scala you have some alternatives enabled by the language itself
+  
+```scala
+class GutenbergRepository extends EbooksRepository  {
+  val gutenbergLibrary: GutenbergLibrary //depends on
+}
+```
+  
+Usage
+```scala
+object gutenbergRepository extends GutenbergRepository {
+  val gutenbergLibrary
+}
+
+val bookshelves: Dataset[Bookshelf] = gutenbergRepository.getBookshelves
+```
 
 ## Window functions
-TODO
+`TfIdf` index is calculated only for the books within bookshelf. 
+We can't compare two books from two different bookshelves, so we need a way to range results
+firstly be the most fitting bookshelf and then order the books by similarity within each bookshelf.  
+  
+`ScoreQueryRunner` uses `window` functions functionality to achieve this requirement.
+   
+ 1. Calculate similarity level for each book by summing terms weighs
+```scala
+ebooks
+   .where($"term".isin(TfIdf.getTerms(query): _ *))
+   .groupBy($"bookshelf_url", $"ebook_id", $"ebook_title")
+   .agg(sum($"weight").as("similarity_level"))
+``` 
+ 2. Rank each book within bookshelf from the most similar to the least 
+```scala
+val similarityLevelWindow = Window.partitionBy($"bookshelf_url").orderBy($"similarity_level".desc)
+similarBooks
+  .select(rank().over(orderedBySimilarityLevelWindow).as("topN"))
+``` 
+
+ 3. Get the total similarity level per bookshelf. Note the absence of in `orderBy`. 
+```scala
+val bookshelvesWindow = Window.partitionBy($"bookshelf_url")
+similarBooks
+.select(sum($"similarity_level").over(bookshelvesWindow).as("bookshelfSimilarityLevel"))
+```
+ 4. Finally get the final result
+```scala
+similarBooks
+ .orderBy($"bookshelfSimilarityLevel".desc, $"bookshelf_url", $"topN")
+ .select($"bookshelf_url", $"title", $"similarity_level")
+```
 
 ## Dataset partitioner
 TODO

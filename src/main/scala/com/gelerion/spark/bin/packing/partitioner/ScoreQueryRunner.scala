@@ -60,7 +60,7 @@ object ScoreQueryRunner extends Logging{
         $"bookshelf_url".substr(urlPrefixLength, urlPrefixLength + 100).as("bookshelf"),
         $"title",
         $"similarity_level")
-      .show(10, false)
+      .show(10, truncate = false)
 
 //    Bookshelf similarity is calculated based on the sum of similarities of each book
 //    similarBooks
