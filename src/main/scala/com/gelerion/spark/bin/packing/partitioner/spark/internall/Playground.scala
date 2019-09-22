@@ -3,6 +3,7 @@ package com.gelerion.spark.bin.packing.partitioner.spark.internall
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, RepartitionOperation}
 import org.apache.spark.sql.exchange.ShuffleExchangeWithCustomPartitionerExec
+import org.apache.spark.sql.exchange.partitioner.{InternalTypedPartitioning, TypedRepartitioner}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.{Dataset, SparkSession, Strategy}
 
@@ -31,7 +32,10 @@ object Playground {
       )
     ).toDS()
 
-    val repartitioned: Dataset[Dept] = department.partitionBy
+    val repartitioned: Dataset[Dept] = department.partitionBy(new TypedRepartitioner[Dept](numPartitions = 2) {
+      override def getPartition(value: Dept): Int = if (value.id.startsWith("a")) 0 else 1
+    })
+
     repartitioned.show(false)
 
     println(s"Num Parts: ${repartitioned.rdd.getNumPartitions}")
@@ -49,13 +53,16 @@ case class Dept(id: String, value: String)
 object CustomPartitionerStrategy extends Strategy {
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
     case r: RepartitionByCustom =>
-      ShuffleExchangeWithCustomPartitionerExec(CustomPartitioning(2), planLater(r.child)) :: Nil
+//      ShuffleExchangeWithCustomPartitionerExec(CustomPartitioning(2), planLater(r.child)) :: Nil
+      ShuffleExchangeWithCustomPartitionerExec(r.partitioning, planLater(r.child)) :: Nil
     // plan could not be applied
     case _ => Nil
   }
 }
 
-case class RepartitionByCustom(child: LogicalPlan, numPartitions: Int) extends RepartitionOperation {
+case class RepartitionByCustom(child: LogicalPlan,
+                               numPartitions: Int,
+                               partitioning: InternalTypedPartitioning[_]) extends RepartitionOperation {
   require(numPartitions > 0, s"Number of partitions ($numPartitions) must be positive.")
   override def maxRows: Option[Long] = child.maxRows
   override def shuffle: Boolean = true

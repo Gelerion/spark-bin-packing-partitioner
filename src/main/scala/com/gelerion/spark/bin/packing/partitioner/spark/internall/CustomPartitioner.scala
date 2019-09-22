@@ -2,7 +2,7 @@ package com.gelerion.spark.bin.packing.partitioner.spark.internall
 
 import org.apache.spark.Partitioner
 
-case class CustomPartitioner(partitions: Int)  extends Partitioner {
+case class CustomPartitioner(partitions: Int) extends Partitioner {
   require(partitions >= 0, s"Number of partitions ($partitions) cannot be negative.")
 
   override def numPartitions: Int = 2

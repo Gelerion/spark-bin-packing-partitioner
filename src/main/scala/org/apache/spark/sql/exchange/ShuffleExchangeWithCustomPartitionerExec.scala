@@ -7,6 +7,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.errors.attachTree
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
+import org.apache.spark.sql.exchange.partitioner.{InternalTypedPartitioning, TypedRepartitioner}
 import org.apache.spark.sql.execution.exchange.Exchange
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.execution.{ShuffledRowRDD, SparkPlan, UnsafeRowSerializer}
@@ -83,6 +84,7 @@ object ShuffleExchangeWithCustomPartitionerExec {
 
     val partitioner: Partitioner = partitioning match {
       case CustomPartitioning(numPartitions) => CustomPartitioner(numPartitions)
+      case r: InternalTypedPartitioning[_] => r.repartitioner.createPartitioner
     }
 
     // 1. SQLConf.get.sortBeforeRepartition TODO
@@ -91,6 +93,7 @@ object ShuffleExchangeWithCustomPartitionerExec {
     def partitionKeyExtractor(): InternalRow => Any = partitioning match {
       case CustomPartitioning(numPartitions) =>
         row => row.getString(0)
+      case r: InternalTypedPartitioning[_] => r.getPartitionKey
       case _ => sys.error(s"Exchange not implemented for $partitioning")
     }
 
