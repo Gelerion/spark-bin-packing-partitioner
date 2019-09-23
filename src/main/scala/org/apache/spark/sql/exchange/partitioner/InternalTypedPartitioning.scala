@@ -5,7 +5,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.codegen.GenerateSafeProjection
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
 
-class InternalTypedPartitioning[T](val repartitioner: TypedRepartitioner[T], deserializer: Expression)
+private [sql] class InternalTypedPartitioning[T](val partitioner: TypedPartitioner[T], deserializer: Expression)
   extends Partitioning with Serializable {
 
   def getPartitionKey: InternalRow => T = {
@@ -15,6 +15,6 @@ class InternalTypedPartitioning[T](val repartitioner: TypedRepartitioner[T], des
     }
   }
 
-  override val numPartitions: Int = repartitioner.numPartitions
+  override val numPartitions: Int = partitioner.numPartitions
 }
 
